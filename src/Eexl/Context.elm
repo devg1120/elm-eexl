@@ -74,7 +74,8 @@ type Output
 -}
 type Context
     = Context
-        { constants : Dict String Int
+        --{ constants : Dict String Int
+        { constants : Dict String T
         --, functions : Dict String (String -> Int)
         --, functions : Dict String ((Array.Array String) -> Int)
         --, functions : Dict String ( Input -> Int)
@@ -94,7 +95,8 @@ empty =
 
 {-| Add a constant to the context.
 -}
-addConstant : String -> Int -> Context -> Context
+--addConstant : String -> Int -> Context -> Context
+addConstant : String -> T -> Context -> Context
 addConstant name value (Context context) =
     Context
         { context
@@ -117,7 +119,8 @@ addFunction name f (Context context) =
 
 {-| Retrieve a constant from the context (not usually used).
 -}
-getConstant : String -> Context -> Maybe Int
+--getConstant : String -> Context -> Maybe Int
+getConstant : String -> Context -> Maybe T
 getConstant name (Context { constants }) =
     Dict.get name constants
 

@@ -24,7 +24,7 @@ formula1 = """ 1
 """
 
 r21 = parse Context.empty formula1      --3
-r31 = parse (Context.empty |> Context.addConstant "x" 9) "1 + x"      --10
+r31 = parse (Context.empty |> Context.addConstant "x" (IntT 9)) "1 + x"      --10
 
 ---------------------------------------------------------------------------------
 str2intadd :Input -> T
@@ -161,3 +161,24 @@ formula3 = """
 
 """
 r51 = parse (Context.empty |> Context.addFunction "substr" substr ) formula3     --"34567"
+
+formula4 = """ 
+    intadd(5 , 3) + val
+
+"""
+r52 = parse (Context.empty 
+                |> Context.addFunction "intadd"  intadd
+                |> Context.addConstant "val"  (IntT 100)
+
+     ) formula4     
+
+formula5 = """ 
+    intadd(12 , val) 
+
+"""
+r53 = parse (Context.empty 
+                |> Context.addFunction "intadd"  intadd
+                |> Context.addConstant "val"  (IntT 100)
+
+     ) formula5     
+

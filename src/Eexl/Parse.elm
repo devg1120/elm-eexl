@@ -113,7 +113,8 @@ bool =
 --         |= lazy (\_ -> expression context)
 
 
-var : Context -> Parser Int
+--var : Context -> Parser Int
+var : Context -> Parser T
 var context =
     succeed identity
         |= variable
@@ -332,24 +333,49 @@ floatValue =
             )
 
 ---------------------------------------------
-argValues : Parser (List ArgValue)
-argValues =
+varValue : Context -> Parser ArgValue
+varValue context =
+  succeed   Just
+    |. spaces
+    |= (var context)
+    |. spaces
+    |> andThen
+            (\( arg ) ->
+                 let
+                   r = case arg of
+                        Just (IntT n) ->
+                                 (AvInt   n)
+                        Just (FloatT n) ->
+                                 (AvFloat n)
+                        Just (StringT n)  ->
+                                 (AvString n)
+                        Just (BoolT n) ->
+                                 (AvBool  n)
+                        Nothing ->
+                                 (AvInt -1)
+                 in
+                 succeed (r)
+            )
+---------------------------------------------
+argValues : Context -> Parser (List ArgValue)
+argValues context =
   succeed (::)
     |. spaces
     |= oneOf
         [ backtrackable  stringValue
         , backtrackable  intValue
-        , floatValue
+        , backtrackable  floatValue
+        , (varValue context)
         ]
     |. spaces
-    |= argValuesTail
+    |= (argValuesTail context)
     |> andThen
             (\( arg ) ->
                  succeed (arg)
             )
 
-argValuesTail : Parser (List ArgValue)
-argValuesTail =
+argValuesTail : Context -> Parser (List ArgValue)
+argValuesTail context =
   oneOf
     [ succeed (::)
         |. symbol ","
@@ -357,10 +383,11 @@ argValuesTail =
         |= oneOf
             [ backtrackable  stringValue
             , backtrackable  intValue
-            , floatValue
+            , backtrackable  floatValue
+            , (varValue context)
             ]
         |. spaces
-        |= lazy (\_ ->  argValuesTail)
+        |= lazy (\_ ->  (argValuesTail context))
     , succeed []
     ]
 
@@ -383,7 +410,7 @@ func context =
         --    , backtrackable  intValues        -- (1, 2, 3)
         --    ,  floatValues
         --    ]
-        |= argValues
+        |= (argValues context)
         |. symbol ")"
         |> andThen
             (\( name, arg ) ->
@@ -521,7 +548,18 @@ expressionHelp context ( exprStack, operatorStack ) =
             , backtrackable (var context)
                 {- push it to the output queue. -}
                 |> andThen
-                    (\i -> expressionHelp context ( IntT i :: exprStack, operatorStack ))
+                    --(\i -> expressionHelp context ( IntT i :: exprStack, operatorStack ))
+                    (\i -> 
+                            case i of
+                                IntT i_ ->
+                                    expressionHelp context ( IntT i_ :: exprStack, operatorStack )
+                                BoolT i_ ->
+                                    expressionHelp context ( BoolT i_ :: exprStack, operatorStack )
+                                FloatT i_ ->
+                                    expressionHelp context ( FloatT i_ :: exprStack, operatorStack )
+                                StringT i_ ->
+                                    expressionHelp context ( StringT i_ :: exprStack, operatorStack )
+                    )
 
             {- if the token is a func, then: -}
             , backtrackable (func context)
