@@ -133,10 +133,11 @@ strjoin ar  =
 
 ---------------------------------------
 
-r41 = parse (Context.empty |> Context.addFunction "str2intadd" str2intadd ) "str2intadd(\"9\",\"2\")"      --11
-r42 = parse (Context.empty |> Context.addFunction "intadd" intadd ) "intadd(7,2)"      --11
---r43 = parse (Context.empty |> Context.addFunction "intadd" intadd ) "intadd(7.1,3)"      --11
-r43 = parse (Context.empty |> Context.addFunction "fladd" fladd ) "fladd(\"3.1\",  \"10.55\")"      --11
+r41 = parse (Context.empty |> Context.addFunction "str2intadd" str2intadd ) "str2intadd(\"9\", \"2\")"      --11
+r42 = parse (Context.empty |> Context.addFunction "intadd" intadd ) "intadd( 7,2)"      --11
+
+--r43 = parse (Context.empty |> Context.addFunction "strjoin" strjoin ) "strjoin(\"3.1\",  \"10.55\")"      --11
+r43 = parse (Context.empty |> Context.addFunction "fladd" fladd ) "fladd( 3.1,10.55 )"      --11
 
 
 formula2 = """ 
@@ -145,6 +146,7 @@ formula2 = """
 """
 r44 = parse (Context.empty |> Context.addFunction "str2intadd" str2intadd ) formula2     --333
 
-r45 = parse (Context.empty |> Context.addFunction "strjoin" strjoin ) "strjoin(\"AAA\",\"BBB\")"      --AAABBB
+r45 = parse (Context.empty |> Context.addFunction "strjoin" strjoin ) "strjoin(  \"AAA\" , \"BBB\")"      --AAABBB
+r46 = parse (Context.empty |> Context.addFunction "strjoin" strjoin ) "strjoin(\"1.1\",\" 1.2\")"      --AAABBB
 
 

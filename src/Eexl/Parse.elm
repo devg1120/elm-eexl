@@ -202,9 +202,11 @@ operatorHelp op ( exprStack, operatorStack ) =
 stringValues : Parser  ListValue
 stringValues =
   succeed   (::)
+    |. spaces
     |. symbol "\""
     |= getChompedString (chompWhile (\c -> c /= '"'))
     |. symbol "\""
+    |. spaces
     |= stringValuesTail
     |> andThen
             (\( arg ) ->
@@ -217,9 +219,11 @@ stringValuesTail =
   oneOf
     [ succeed (::)
         |. symbol ","
+        |. spaces
         |. symbol "\""
         |= getChompedString (chompWhile (\c -> c /= '"'))
         |. symbol "\""
+        |. spaces
         |= lazy (\_ ->  stringValuesTail)
     , succeed  []
     ]
@@ -230,7 +234,9 @@ stringValuesTail =
 intValues : Parser ListValue
 intValues =
   succeed (::)
+    |. spaces
     |= int
+    |. spaces
     |= intValuesTail
     |> andThen
             (\( arg ) ->
@@ -242,7 +248,9 @@ intValuesTail =
   oneOf
     [ succeed (::)
         |. symbol ","
+        |. spaces
         |= int
+        |. spaces
         |= lazy (\_ ->  intValuesTail)
     , succeed []
     ]
@@ -265,7 +273,9 @@ myfloat =
 floatValues : Parser ListValue
 floatValues =
   succeed (::)
+    |. spaces
     |= float
+    |. spaces
     |= floatValuesTail
     |> andThen
             (\( arg ) ->
@@ -277,7 +287,9 @@ floatValuesTail =
   oneOf
     [ succeed (::)
         |. symbol ","
+        |. spaces
         |= float
+        |. spaces
         |= lazy (\_ ->  floatValuesTail)
     , succeed []
     ]
@@ -312,6 +324,7 @@ func context =
         |. symbol ")"
         |> andThen
             (\( name, arg ) ->
+                --let _ = Debug.log "func arg parse ..." 0 in
                 let
                   base = case arg of
                            ListString arg_  ->
