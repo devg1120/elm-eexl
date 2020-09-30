@@ -1,6 +1,7 @@
 module Eexl.Context exposing
     ( Context
     , Input (..)
+    , Output (..)
     , empty
     , addConstant, addFunction
     , getConstant, getFunction
@@ -41,6 +42,7 @@ values to constants, and set functions that can be called from the expression.
 
 -}
 
+import Eexl.Eval as Eval exposing (T(..))
 import Dict exposing (Dict)
 import Array
 
@@ -50,6 +52,11 @@ type Input
     | ArrayInt (Array.Array Int)
     | ArrayFloat (Array.Array Float)
 
+type Output
+   = OutputString  String
+   | OutputInt  Int
+   | OutputFloat  Float
+
 {-| This is the type of `Context` that is passed into the functions that evaluate expressions.
 -}
 type Context
@@ -57,7 +64,8 @@ type Context
         { constants : Dict String Int
         --, functions : Dict String (String -> Int)
         --, functions : Dict String ((Array.Array String) -> Int)
-        , functions : Dict String ( Input -> Int)
+        --, functions : Dict String ( Input -> Int)
+        , functions : Dict String ( Input -> T)
         }
 
 
@@ -85,7 +93,8 @@ addConstant name value (Context context) =
 -}
 --addFunction : String -> (String -> Int) -> Context -> Context
 --addFunction : String -> ((Array.Array String) -> Int) -> Context -> Context
-addFunction : String -> (Input -> Int) -> Context -> Context
+--addFunction : String -> (Input -> Int) -> Context -> Context
+addFunction : String -> (Input -> T) -> Context -> Context
 addFunction name f (Context context) =
     Context
         { context
@@ -104,6 +113,7 @@ getConstant name (Context { constants }) =
 -}
 --getFunction : String -> Context -> Maybe (String -> Int)
 --getFunction : String -> Context -> Maybe ((Array.Array String) -> Int)
-getFunction : String -> Context -> Maybe (Input -> Int)
+--getFunction : String -> Context -> Maybe (Input -> Int)
+getFunction : String -> Context -> Maybe (Input -> T)
 getFunction name (Context { functions }) =
     Dict.get name functions

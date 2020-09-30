@@ -4,8 +4,10 @@ import Result.FlatMap as Result
 
 
 type T
-    = BoolT Bool
-    | IntT Int
+    = BoolT   Bool
+    | IntT    Int
+    | FloatT  Float
+    | StringT String
 
 
 tToBool : T -> Maybe Bool
