@@ -1,6 +1,6 @@
 module Eexl.Parse exposing (parse)
 
-import Eexl.Context as Context exposing (Context)
+import Eexl.Context as Context exposing (Context,Input (..))
 import Eexl.Eval as Eval exposing (T(..))
 import List.Extra
 import Parser exposing (..)
@@ -247,7 +247,8 @@ func context =
         |> andThen
             (\( name, arg ) ->
                 let
-                  base = Array.fromList arg
+                  --base = Array.fromList arg
+                  base = ArrayString (Array.fromList arg)
                 in
                 Context.getFunction name context
                     |> Maybe.map (\fn -> succeed <| fn base)
@@ -275,7 +276,8 @@ func2 context =
                    --base = Array.fromList []
                    --base2 = Array.push arg base
                    list = String.split "," arg
-                   base2 = Array.fromList list
+                   --base2 = Array.fromList list
+                   base2 = ArrayString (Array.fromList list)
 
                 in
                 Context.getFunction name context

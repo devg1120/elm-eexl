@@ -1,6 +1,7 @@
 module Test exposing (..)
 
-import Eexl.Context as Context exposing (Context)
+--import Eexl.Context as Context exposing (Context)
+import Eexl.Context as Context exposing (Context,Input (..))
 import Eexl.Eexl exposing (evaluateBool, evaluateInt)
 import Eexl.Parse exposing (parse)
 import Array
@@ -41,7 +42,7 @@ r41 = parse (Context.empty |> Context.addFunction "add" add ) "add(\"9\")"      
 --}
 
 
-
+{--
 add :(Array.Array String) -> Int
 add ar  =
    let
@@ -49,6 +50,34 @@ add ar  =
      b_ = String.toInt (Array.get 1 ar  |> Maybe.withDefault "0") |> Maybe.withDefault 0
    in
     a_ + b_
+
+
+r41 = parse (Context.empty |> Context.addFunction "add" add ) "add(\"9\",\"2\")"      --11
+
+
+formula2 = """ 
+    add("222","111")
+
+"""
+r42 = parse (Context.empty |> Context.addFunction "add" add ) formula2     --9
+
+--}
+
+add :Input -> Int
+add ar  =
+   let
+     ans = case ar of
+              ArrayString ar_ ->
+                 let
+                   a_ = String.toInt (Array.get 0 ar_  |> Maybe.withDefault "0") |> Maybe.withDefault 0 
+                   b_ = String.toInt (Array.get 1 ar_  |> Maybe.withDefault "0") |> Maybe.withDefault 0
+                 in
+                 a_ + b_
+
+              _ ->
+                 -1
+   in
+   ans
 
 
 r41 = parse (Context.empty |> Context.addFunction "add" add ) "add(\"9\",\"2\")"      --11
