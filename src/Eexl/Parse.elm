@@ -1,6 +1,6 @@
 module Eexl.Parse exposing (parse)
 
-import Eexl.Context as Context exposing (Context,Input (..), Output(..))
+import Eexl.Context as Context exposing (Context, Input , ArgValue(..))
 import Eexl.Eval as Eval exposing (T(..))
 import List.Extra
 import Parser exposing (..)
@@ -255,21 +255,9 @@ intValuesTail =
     , succeed []
     ]
 
-------------------------------------------
-myfloat : Parser Float
-myfloat =
-    succeed ()
-        |. chompWhile Char.isDigit
-        |> getChompedString
-        |> Parser.andThen
-           (\string ->
-               case string |> String.toFloat of
-                   Just a ->
-                       succeed a
-                   Nothing ->
-                       problem "not a number"
-           )
 
+--  1.1, 10.5, 9.99  to List
+--
 floatValues : Parser ListValue
 floatValues =
   succeed (::)
@@ -302,8 +290,125 @@ type ListValue
 
 -------------------------------------------------------------
 
+stringValue : Parser ArgValue
+stringValue =
+  --succeed   (::)
+  succeed   Just
+    |. spaces
+    |. symbol "\""
+    |= getChompedString (chompWhile (\c -> c /= '"'))
+    |. symbol "\""
+    |. spaces
+    |> andThen
+            (\( arg ) ->
+                 succeed (AvString (arg   |> Maybe.withDefault "" ))
+            )
 
---func : Context -> Parser Output
+
+intValue : Parser ArgValue
+intValue =
+  --succeed (::)
+  succeed   Just
+    |. spaces
+    |= int
+    |. spaces
+    |> andThen
+            (\( arg ) ->
+                 --succeed (AvInt arg)
+                 succeed (AvInt (arg   |> Maybe.withDefault 0 ))
+            )
+
+floatValue : Parser ArgValue
+floatValue =
+  --succeed (::)
+  succeed   Just
+    |. spaces
+    |= float
+    |. spaces
+    |> andThen
+            (\( arg ) ->
+                 --succeed (AvFloat arg)
+                 succeed (AvFloat (arg   |> Maybe.withDefault 0.0 ))
+            )
+
+---------------------------------------------
+argValues : Parser (List ArgValue)
+argValues =
+  succeed (::)
+    |. spaces
+    |= oneOf
+        [ backtrackable  stringValue
+        , backtrackable  intValue
+        , floatValue
+        ]
+    |. spaces
+    |= argValuesTail
+    |> andThen
+            (\( arg ) ->
+                 succeed (arg)
+            )
+
+argValuesTail : Parser (List ArgValue)
+argValuesTail =
+  oneOf
+    [ succeed (::)
+        |. symbol ","
+        |. spaces
+        |= oneOf
+            [ backtrackable  stringValue
+            , backtrackable  intValue
+            , floatValue
+            ]
+        |. spaces
+        |= lazy (\_ ->  argValuesTail)
+    , succeed []
+    ]
+
+-------------------------------------------------------------
+
+func : Context -> Parser T
+func context =
+    succeed Tuple.pair
+        |= backtrackable
+            (variable
+                { start = Char.isLower
+                , inner = Char.isAlphaNum
+                , reserved = Set.empty
+                }
+            )
+        |. backtrackable (symbol "(")
+        --|= stringValues
+        --|= oneOf
+        --    [ backtrackable  stringValues     -- ("AAA","BBB","CCC")
+        --    , backtrackable  intValues        -- (1, 2, 3)
+        --    ,  floatValues
+        --    ]
+        |= argValues
+        |. symbol ")"
+        |> andThen
+            (\( name, arg ) ->
+                --let _ = Debug.log "func arg parse ..." 0 in
+                let
+                  --base = case arg of
+                  --         ListString arg_  ->
+                  --                let _ = Debug.log "ListString" 0 in
+                  --                ArrayString (Array.fromList arg_)
+                  --         ListInt arg_  ->
+                  --                let _ = Debug.log "ListInt" 0 in
+                  --                ArrayInt (Array.fromList arg_)
+                  --         ListFloat arg_  ->
+                  --                let _ = Debug.log "ListFloat" 0 in
+                  --                ArrayFloat (Array.fromList arg_)
+
+                  base = Array.fromList arg
+
+                in
+                Context.getFunction name context
+                    |> Maybe.map (\fn -> succeed <| fn base)
+                    |> Maybe.withDefault (problem <| "Unknown function '" ++ name ++ "'")
+            )
+
+{--
 func : Context -> Parser T
 func context =
     succeed Tuple.pair
@@ -341,6 +446,7 @@ func context =
                     |> Maybe.map (\fn -> succeed <| fn base)
                     |> Maybe.withDefault (problem <| "Unknown function '" ++ name ++ "'")
             )
+--}
 
 
 rParenHelp : ( List T, List Operator ) -> Parser ( List T, List Operator )

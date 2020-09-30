@@ -1,7 +1,7 @@
 module Eexl.Context exposing
     ( Context
-    , Input (..)
-    , Output (..)
+    , Input 
+    , ArgValue (..)
     , empty
     , addConstant, addFunction
     , getConstant, getFunction
@@ -46,16 +46,29 @@ import Eexl.Eval as Eval exposing (T(..))
 import Dict exposing (Dict)
 import Array
 
-
+{--
 type Input
     = ArrayString (Array.Array String)
     | ArrayInt (Array.Array Int)
     | ArrayFloat (Array.Array Float)
+--}
 
+type ArgValue
+    = AvInt    Int
+    | AvBool   Bool
+    | AvFloat  Float
+    | AvString  String
+
+type alias Input
+    = Array.Array ArgValue
+
+
+{--
 type Output
    = OutputString  String
    | OutputInt  Int
    | OutputFloat  Float
+--}
 
 {-| This is the type of `Context` that is passed into the functions that evaluate expressions.
 -}
