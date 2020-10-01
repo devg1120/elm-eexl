@@ -306,6 +306,165 @@ typevarHelp =
     , inner = \c -> Char.isAlphaNum c || c == '_'
     , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
     }
+
+----------------------------------------------------------
+-- FUNC def  start 
+----------------------------------------------------------
+
+{--
+-------------------------------------------------------------
+
+stringValue : Parser ArgValue
+stringValue =
+  --succeed   (::)
+  succeed   Just
+    |. spaces
+    |. symbol "\""
+    |= getChompedString (chompWhile (\c -> c /= '"'))
+    |. symbol "\""
+    |. spaces
+    |> andThen
+            (\( arg ) ->
+                 succeed (AvString (arg   |> Maybe.withDefault "" ))
+            )
+
+
+intValue : Parser ArgValue
+intValue =
+  --succeed (::)
+  succeed   Just
+    |. spaces
+    |= int
+    |. spaces
+    |> andThen
+            (\( arg ) ->
+                 --succeed (AvInt arg)
+                 succeed (AvInt (arg   |> Maybe.withDefault 0 ))
+            )
+
+floatValue : Parser ArgValue
+floatValue =
+  --succeed (::)
+  succeed   Just
+    |. spaces
+    |= float
+    |. spaces
+    |> andThen
+            (\( arg ) ->
+                 --succeed (AvFloat arg)
+                 succeed (AvFloat (arg   |> Maybe.withDefault 0.0 ))
+            )
+
+
+---------------------------------------------
+varValue : Context -> Parser ArgValue
+varValue context =
+  succeed   Just
+    |. spaces
+    |= (var context)
+    |. spaces
+    |> andThen
+            (\( arg ) ->
+                 let
+                   r = case arg of
+                        Just (IntT n) ->
+                                 (AvInt   n)
+                        Just (FloatT n) ->
+                                 (AvFloat n)
+                        Just (StringT n)  ->
+                                 (AvString n)
+                        Just (BoolT n) ->
+                                 (AvBool  n)
+                        Nothing ->
+                                 (AvInt -1)
+                 in
+                 succeed (r)
+            )
+
+---------------------------------------------
+argValues : Context -> Parser (List ArgValue)
+argValues context =
+  succeed (::)
+    |. spaces
+    |= oneOf
+        [ backtrackable  stringValue
+        , backtrackable  intValue
+        , backtrackable  floatValue
+        , (varValue context)
+        ]
+    |. spaces
+    |= (argValuesTail context)
+    |> andThen
+            (\( arg ) ->
+                 succeed (arg)
+            )
+
+argValuesTail : Context -> Parser (List ArgValue)
+argValuesTail context =
+  oneOf
+    [ succeed (::)
+        |. symbol ","
+        |. spaces
+        |= oneOf
+            [ backtrackable  stringValue
+            , backtrackable  intValue
+            , backtrackable  floatValue
+            , (varValue context)
+            ]
+        |. spaces
+        |= lazy (\_ ->  (argValuesTail context))
+    , succeed []
+    ]
+
+-------------------------------------------------------------
+
+func : Context -> Parser Expr
+func context =
+    succeed Tuple.pair
+        |= backtrackable
+            (variable
+                { start = Char.isLower
+                , inner = Char.isAlphaNum
+                , reserved = Set.empty
+                }
+            )
+        |. backtrackable (symbol "(")
+        --|= stringValues
+        --|= oneOf
+        --    [ backtrackable  stringValues     -- ("AAA","BBB","CCC")
+        --    , backtrackable  intValues        -- (1, 2, 3)
+        --    ,  floatValues
+        --    ]
+        |= (argValues context)
+        |. symbol ")"
+        |> andThen
+            (\( name, arg ) ->
+                --let _ = Debug.log "func arg parse ..." 0 in
+                let
+                  --base = case arg of
+                  --         ListString arg_  ->
+                  --                let _ = Debug.log "ListString" 0 in
+                  --                ArrayString (Array.fromList arg_)
+                  --         ListInt arg_  ->
+                  --                let _ = Debug.log "ListInt" 0 in
+                  --                ArrayInt (Array.fromList arg_)
+                  --         ListFloat arg_  ->
+                  --                let _ = Debug.log "ListFloat" 0 in
+                  --                ArrayFloat (Array.fromList arg_)
+
+                  base = Array.fromList arg
+
+                in
+                Context.getFunction name context
+                    |> Maybe.map (\fn -> succeed <| fn base)
+                    |> Maybe.withDefault (problem <| "Unknown function '" ++ name ++ "'")
+            )
+
+--}
+----------------------------------------------------------
+-- FUNC def   end
+----------------------------------------------------------
+
 -- PARSER
 
 
