@@ -1,4 +1,4 @@
-module Eexl.Parse exposing (parse)
+module Eexl.Parse exposing (parse, parse2)
 
 import Eexl.Context as Context exposing (Context, Input , ArgValue(..))
 import Eexl.Eval as Eval exposing (T(..))
@@ -78,6 +78,9 @@ parse : Context -> String -> Result (List DeadEnd) T
 parse context string =
     run (expression context) string
 
+parse2 : Context -> String -> Result (List DeadEnd) (List Stmt)
+parse2 context string =
+    run (script context) string
 
 int : Parser Int
 int =
@@ -495,7 +498,7 @@ rParenHelp ( exprStack, operatorStack ) =
 
 
 endHelp : ( List T, List Operator ) -> Parser T
-endHelp ( exprStack, operatorStack ) =
+endHelp ( exprStack,operatorStack ) =
     case ( exprStack, operatorStack ) of
         ( _, LParenOperator :: os ) ->
             problem "Mismatched left parenthesis"
@@ -518,10 +521,77 @@ endHelp ( exprStack, operatorStack ) =
             problem ""
 
 
+-----------------------------------------------------------
+type alias Stmt = String
+
+--script : Context -> Parser T
+script : Context -> Parser (List Stmt)
+script context =
+    statements
+    --commentout 
+
+{--
+commentout : Parser (Stmt)
+commentout =
+  succeed (++)
+    |.spaces
+    |. lineComment "#"
+--}
+
+statements : Parser (List Stmt)
+statements =
+  loop [] statementsHelp
+
+
+statementsHelp : List Stmt -> Parser (Step (List Stmt) (List Stmt))
+statementsHelp revStmts =
+  oneOf
+    [ succeed (\stmt -> Loop (stmt :: revStmts))
+        |. spaces
+        |= statement
+        |. spaces
+        |. symbol ";"
+        |. spaces
+    , succeed ()
+        |> map (\_ -> Done (List.reverse revStmts))
+    ]
+      
+lineCommentWorkAround : String -> Parser ()
+lineCommentWorkAround start =
+    succeed () |. symbol start |. chompWhile (\c -> c /= '\n')
+
+statement : Parser String
+statement =
+  --getChompedString (chompWhile Char.isDigit)
+  getChompedString (chompWhile isUninteresting)
+    |> andThen statementCheck
+
+
+isUninteresting : Char -> Bool
+isUninteresting char =
+ -- char /= ';' && char /= '\n'
+  char /= ';' 
+
+statementCheck : String -> Parser String
+statementCheck code =
+    succeed code
+
+zipCode : Parser String
+zipCode =
+  getChompedString (chompWhile Char.isDigit)
+    |> andThen checkZipCode
+
+checkZipCode : String -> Parser String
+checkZipCode code =
+  if String.length code == 5 then
+    succeed code
+  else
+    problem "a U.S. zip code has exactly 5 digits"
+
+-----------------------------------------------------------
 expression : Context -> Parser T
 expression context =
     expressionHelp context ( [], [] )
-
 
 expressionHelp : Context -> ( List T, List Operator ) -> Parser T
 expressionHelp context ( exprStack, operatorStack ) =

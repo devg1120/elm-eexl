@@ -2,7 +2,7 @@ module Test exposing (..)
 
 import Eexl.Context as Context exposing (Context,Input , ArgValue(..) )
 import Eexl.Eexl exposing (evaluateBool, evaluateInt)
-import Eexl.Parse exposing (parse)
+import Eexl.Parse exposing (parse, parse2)
 import Eexl.Eval as Eval exposing (T(..))
 import Array
 
@@ -173,7 +173,7 @@ r52 = parse (Context.empty
      ) formula4     
 
 formula5 = """ 
-    intadd(12 , val) 
+    intadd(5 , val) 
 
 """
 r53 = parse (Context.empty 
@@ -182,3 +182,28 @@ r53 = parse (Context.empty
 
      ) formula5     
 
+---------------------------
+
+script1 = """
+    a = sum( ); 12345;
+   b98765;
+   sun aa
+       bbb ;
+"""
+r100 = parse2 Context.empty  script1
+
+script2 = """
+     a = sum( ) 
+12345;
+   b98765 ;
+   sun aa ;
+     #   bbb ; 
+"""
+script3 = """
+    a = sum( ) 
+12345 ]
+   b98765 ]
+   sun aa ]
+       bbb ] 
+"""
+r101 = parse2 Context.empty  script2
