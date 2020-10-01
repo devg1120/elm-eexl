@@ -1,9 +1,6 @@
 module TestExpr exposing (..)
 
 import Parser exposing (..)
-import Dict exposing (Dict)
-import Set exposing (Set)
-
 
 
 -- EXPRESSIONS
@@ -14,8 +11,6 @@ type Expr
   | Floating Float
   | String String
   | Bool Bool
-  --| Variable OutVal
-  | Variable String
   | Add Expr Expr   --[+]  String Float
   | Sub Expr Expr   --[-]  Float
   | Mul Expr Expr   --[*]  Float
@@ -30,66 +25,11 @@ type OutVal
   | OString String
   | OBool Bool
 
---------------------------------------------------------- context
 
-type Context
-    = Context
-        { constants : Dict String OutVal
-       -- , functions : Dict String (Input -> OutVal)
-        }
-
-empty : Context
-empty =
-    Context
-        { constants = Dict.empty
-       -- , functions = Dict.empty
-        }
-
-addConstant : String -> OutVal -> Context -> Context
-addConstant name value (Context context) =
-    Context
-        { context
-            | constants = context.constants |> Dict.insert name value
-        }
-
-{--
-addFunction : String -> (Input -> T) -> Context -> Context
-addFunction name f (Context context) =
-    Context
-        { context
-            | functions = context.functions |> Dict.insert name f
-        }
---}
-
-getConstant : String -> Context -> Maybe OutVal
-getConstant name (Context { constants }) =
-    Dict.get name constants
-
-{--
-getFunction : String -> Context -> Maybe (Input -> T)
-getFunction name (Context { functions }) =
-    Dict.get name functions
---}
-
---------------------------------------------------------- evalate
-
---evaluate : Expr -> OutVal
---evaluate  expr =
-evaluate : Context -> Expr -> OutVal
-evaluate context expr =
+--evaluate : Expr -> Float
+evaluate : Expr -> OutVal
+evaluate expr =
   case expr of
-    Variable name ->
-       let
-          --value = OString "testOK"
-          value = getConstant name context
-          result = case value of
-                      Just v ->
-                             v
-                      _ ->
-                             (OString "not_found")
-       in
-       result
-     
     String s ->
      OString  s
 
@@ -115,8 +55,8 @@ evaluate context expr =
      OFloat ( a_ +  b_)
     --}
      let
-       a_ = evaluate context a
-       b_ = evaluate context b
+       a_ = evaluate a
+       b_ = evaluate b
      in
      case (a_, b_) of
         (OFloat aa,  OFloat bb) ->
@@ -129,10 +69,10 @@ evaluate context expr =
 
     Sub a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate a) of
                OFloat n -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate b) of
                OFloat n -> n
                _ -> 0
      in
@@ -140,10 +80,10 @@ evaluate context expr =
 
     Mul a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate a) of
                OFloat n -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate b) of
                OFloat n -> n
                _ -> 0
      in
@@ -151,10 +91,10 @@ evaluate context expr =
 
     Div a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate a) of
                OFloat n -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate b) of
                OFloat n -> n
                _ -> 0
      in
@@ -162,10 +102,10 @@ evaluate context expr =
 
     Div2 a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate a) of
                OFloat n -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate b) of
                OFloat n -> n
                _ -> 0
      in
@@ -173,10 +113,10 @@ evaluate context expr =
 
     Div3 a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate a) of
                OFloat n -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate b) of
                OFloat n -> n
                _ -> 0
      in
@@ -192,10 +132,10 @@ evaluate context expr =
 
     And a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate a) of
                OBool n -> n
                _ -> False
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate b) of
                OBool n -> n
                _ -> False
      in
@@ -203,10 +143,10 @@ evaluate context expr =
 
     Or a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate a) of
                OBool n -> n
                _ -> False
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate b) of
                OBool n -> n
                _ -> False
      in
@@ -293,19 +233,6 @@ addHex char total =
   else
     16 * total + (10 + code - 0x61)
 
-
-typevar : Parser Expr
-typevar =
-  succeed (\identity -> Variable identity)
-    |= typevarHelp
-
-typevarHelp : Parser String
-typevarHelp =
-  variable
-    { start = Char.isLower
-    , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
-    }
 -- PARSER
 
 
@@ -360,7 +287,6 @@ term =
     |= oneOf
          [ digits
          , string
-         , typevar
          , bool
          , succeed identity
              |. symbol "("
@@ -477,42 +403,11 @@ exec str =
            Debug.toString err
         Ok expr ->
            let
-             context = empty
-             context_ = addConstant "test1" (OString "OKOK") context
-             context2 = addConstant "test_flort" (OFloat 10.1) context_
-             --ans = evaluate expr
-             ans = evaluate context2 expr
+             ans = evaluate expr
            in
            Debug.toString ans
              
  in
  result
 
-{--
-> import TestExpr exposing (..)
-> exec " 1 + 3 + (7 //2) "
-"OFloat 7" : String
-> exec " 1 + 3 + (7 /2) "
-"OFloat 7.5" : String
-> exec " 1 + 3 + (7 %2) "
-"OFloat 5" : String
-> exec " \"abc\" + \"ABC\" "
-"OString \"abcABC\"" : String
-> exec " False "
-"OBool False" : String
-> exec " True "
-"OBool True" : String
-> exec " True && True"
-"OBool True" : String
-> exec " True && False"
-"OBool False" : String
-> exec " True || True"
-"OBool True" : String
-> exec " True || False"
-"OBool True" : String
-> exec " \"abc\" + test1 "
-"OString \"abcOKOK\"" : String
-> exec " 1.1  + test_flort "
-"OFloat 11.2" : String
 
---}
