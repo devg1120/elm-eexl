@@ -38,7 +38,7 @@ type OutVal
 type Context
     = Context
         { constants : Dict String OutVal
-        , functions : Dict String (Input -> OutVal)
+        , functions : Dict String (Context -> Input -> OutVal)
         }
 
 empty : Context
@@ -57,7 +57,7 @@ addConstant name value (Context context) =
 
 
 --addFunction : String -> (Input -> Maybe OutVal) -> Context -> Context
-addFunction : String -> (Input -> OutVal) -> Context -> Context
+addFunction : String -> (Context -> Input -> OutVal) -> Context -> Context
 addFunction name f (Context context) =
     Context
         { context
@@ -70,7 +70,7 @@ getConstant name (Context { constants }) =
     Dict.get name constants
 
 
-getFunction : String -> Context -> Maybe (Input -> OutVal)
+getFunction : String -> Context -> Maybe (Context -> Input -> OutVal)
 getFunction name (Context { functions }) =
     Dict.get name functions
 
@@ -102,7 +102,7 @@ evaluate context expr =
            func_ = getFunction name context
            ans = case func_ of
                      Just f ->
-                            (f args)
+                            (f context args)
                      _ ->
                             (OString " !!not_found")
          in
@@ -334,6 +334,7 @@ type ArgValue
     | AvBool   Bool
     | AvFloat  Float
     | AvString  String
+    | AvVar     String
 
 type alias Input
     = Array.Array ArgValue
@@ -382,6 +383,18 @@ floatValue =
             )
 
 
+varValue : Parser ArgValue
+varValue =
+  succeed (\identity -> AvVar identity)
+    |= varValueHelp
+
+varValueHelp : Parser String
+varValueHelp =
+  variable
+    { start = Char.isLower
+    , inner = \c -> Char.isAlphaNum c || c == '_'
+    , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
+    }
 ---------------------------------------------
 {--
 varValue : Context -> Parser ArgValue
@@ -416,7 +429,8 @@ argValues  =
     |= oneOf
         [ backtrackable  stringValue
         , backtrackable  intValue
-        , floatValue
+        , backtrackable  floatValue
+        , varValue
         ]
     |. spaces
     |= argValuesTail 
@@ -434,7 +448,8 @@ argValuesTail  =
         |= oneOf
             [ backtrackable  stringValue
             , backtrackable  intValue
-            , floatValue
+            , backtrackable  floatValue
+            , varValue
             ]
         |. spaces
         |= lazy (\_ ->  argValuesTail )
@@ -652,8 +667,8 @@ finalize revOps finalExpr =
 
 ----------------
 
-strjoin :Input -> OutVal
-strjoin ar  =
+strjoin : Context -> Input -> OutVal
+strjoin context ar  =
    let
        a_ = case (Array.get 0 ar) of
                   Just (AvString a)  ->
@@ -664,6 +679,23 @@ strjoin ar  =
        b_ = case (Array.get 1 ar) of
                   Just (AvString a)  ->
                            a 
+                  Just (AvVar a)  ->
+                           --"<<" ++ a  ++ ">>"
+                           let
+                              value = getConstant a context
+                              ans_ = case value of
+                                          Just v ->
+                                                 v
+                                          _ ->
+                                                 (OString " AvVar not_found")
+                              result = case ans_ of
+                                          OString v ->
+                                                 v
+                                          _ ->
+                                                 " AvVar not_found"
+                           in
+                           result
+
                   _ ->
                           ""
 
@@ -720,5 +752,6 @@ exec str =
 "OFloat 11.2" : String
 > exec " \"abc\" + strjoin( \"ABC\", \"XYZ\") "
 "OString \"abcABCXYZ\"" : Strin
-
+> exec " \"abc\" + strjoin( \"ABC\", test1) "
+"OString \"abcABCOKOK\"" : String
 --}
