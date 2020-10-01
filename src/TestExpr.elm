@@ -3,6 +3,7 @@ module TestExpr exposing (..)
 import Parser exposing (..)
 import Dict exposing (Dict)
 import Set exposing (Set)
+import Array
 
 
 
@@ -16,6 +17,7 @@ type Expr
   | Bool Bool
   --| Variable OutVal
   | Variable String
+  | Function String (Array.Array ArgValue)
   | Add Expr Expr   --[+]  String Float
   | Sub Expr Expr   --[-]  Float
   | Mul Expr Expr   --[*]  Float
@@ -30,19 +32,20 @@ type OutVal
   | OString String
   | OBool Bool
 
+
 --------------------------------------------------------- context
 
 type Context
     = Context
         { constants : Dict String OutVal
-       -- , functions : Dict String (Input -> OutVal)
+        , functions : Dict String (Input -> OutVal)
         }
 
 empty : Context
 empty =
     Context
         { constants = Dict.empty
-       -- , functions = Dict.empty
+        , functions = Dict.empty
         }
 
 addConstant : String -> OutVal -> Context -> Context
@@ -52,24 +55,25 @@ addConstant name value (Context context) =
             | constants = context.constants |> Dict.insert name value
         }
 
-{--
-addFunction : String -> (Input -> T) -> Context -> Context
+
+--addFunction : String -> (Input -> Maybe OutVal) -> Context -> Context
+addFunction : String -> (Input -> OutVal) -> Context -> Context
 addFunction name f (Context context) =
     Context
         { context
             | functions = context.functions |> Dict.insert name f
         }
---}
+
 
 getConstant : String -> Context -> Maybe OutVal
 getConstant name (Context { constants }) =
     Dict.get name constants
 
-{--
-getFunction : String -> Context -> Maybe (Input -> T)
+
+getFunction : String -> Context -> Maybe (Input -> OutVal)
 getFunction name (Context { functions }) =
     Dict.get name functions
---}
+
 
 --------------------------------------------------------- evalate
 
@@ -90,6 +94,21 @@ evaluate context expr =
        in
        result
      
+    Function name args ->
+         --  getFunction name context
+         --       |> Maybe.map (\fn -> succeed <| fn args)
+         --       |> Maybe.withDefault (problem <| "Unknown function '" ++ name ++ "'")
+         let
+           func_ = getFunction name context
+           ans = case func_ of
+                     Just f ->
+                            (f args)
+                     _ ->
+                            (OString " !!not_found")
+         in
+         ans
+
+
     String s ->
      OString  s
 
@@ -310,8 +329,15 @@ typevarHelp =
 ----------------------------------------------------------
 -- FUNC def  start 
 ----------------------------------------------------------
+type ArgValue
+    = AvInt    Int
+    | AvBool   Bool
+    | AvFloat  Float
+    | AvString  String
 
-{--
+type alias Input
+    = Array.Array ArgValue
+
 -------------------------------------------------------------
 
 stringValue : Parser ArgValue
@@ -357,6 +383,7 @@ floatValue =
 
 
 ---------------------------------------------
+{--
 varValue : Context -> Parser ArgValue
 varValue context =
   succeed   Just
@@ -380,27 +407,26 @@ varValue context =
                  in
                  succeed (r)
             )
-
+--}
 ---------------------------------------------
-argValues : Context -> Parser (List ArgValue)
-argValues context =
+argValues :  Parser (List ArgValue)
+argValues  =
   succeed (::)
     |. spaces
     |= oneOf
         [ backtrackable  stringValue
         , backtrackable  intValue
-        , backtrackable  floatValue
-        , (varValue context)
+        , floatValue
         ]
     |. spaces
-    |= (argValuesTail context)
+    |= argValuesTail 
     |> andThen
             (\( arg ) ->
                  succeed (arg)
             )
 
-argValuesTail : Context -> Parser (List ArgValue)
-argValuesTail context =
+argValuesTail :  Parser (List ArgValue)
+argValuesTail  =
   oneOf
     [ succeed (::)
         |. symbol ","
@@ -408,18 +434,17 @@ argValuesTail context =
         |= oneOf
             [ backtrackable  stringValue
             , backtrackable  intValue
-            , backtrackable  floatValue
-            , (varValue context)
+            , floatValue
             ]
         |. spaces
-        |= lazy (\_ ->  (argValuesTail context))
+        |= lazy (\_ ->  argValuesTail )
     , succeed []
     ]
 
 -------------------------------------------------------------
 
-func : Context -> Parser Expr
-func context =
+func :  Parser Expr
+func  =
     succeed Tuple.pair
         |= backtrackable
             (variable
@@ -435,7 +460,7 @@ func context =
         --    , backtrackable  intValues        -- (1, 2, 3)
         --    ,  floatValues
         --    ]
-        |= (argValues context)
+        |= argValues 
         |. symbol ")"
         |> andThen
             (\( name, arg ) ->
@@ -455,12 +480,10 @@ func context =
                   base = Array.fromList arg
 
                 in
-                Context.getFunction name context
-                    |> Maybe.map (\fn -> succeed <| fn base)
-                    |> Maybe.withDefault (problem <| "Unknown function '" ++ name ++ "'")
+                succeed (Function name  base)
             )
 
---}
+
 ----------------------------------------------------------
 -- FUNC def   end
 ----------------------------------------------------------
@@ -519,7 +542,9 @@ term =
     |= oneOf
          [ digits
          , string
-         , typevar
+         , backtrackable func
+         , backtrackable typevar
+         --, backtrackable func
          , bool
          , succeed identity
              |. symbol "("
@@ -627,6 +652,25 @@ finalize revOps finalExpr =
 
 ----------------
 
+strjoin :Input -> OutVal
+strjoin ar  =
+   let
+       a_ = case (Array.get 0 ar) of
+                  Just (AvString a)  ->
+                           a 
+                  _ ->
+                           ""
+
+       b_ = case (Array.get 1 ar) of
+                  Just (AvString a)  ->
+                           a 
+                  _ ->
+                          ""
+
+       ans = a_ ++  b_
+   in
+   OString ans
+
 exec : String -> String
 exec str =
  let
@@ -639,8 +683,9 @@ exec str =
              context = empty
              context_ = addConstant "test1" (OString "OKOK") context
              context2 = addConstant "test_flort" (OFloat 10.1) context_
+             context3 = addFunction "strjoin" strjoin  context2
              --ans = evaluate expr
-             ans = evaluate context2 expr
+             ans = evaluate context3 expr
            in
            Debug.toString ans
              
@@ -673,5 +718,7 @@ exec str =
 "OString \"abcOKOK\"" : String
 > exec " 1.1  + test_flort "
 "OFloat 11.2" : String
+> exec " \"abc\" + strjoin( \"ABC\", \"XYZ\") "
+"OString \"abcABCXYZ\"" : Strin
 
 --}
