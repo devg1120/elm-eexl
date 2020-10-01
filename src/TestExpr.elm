@@ -26,6 +26,12 @@ type Expr
   | Div3 Expr Expr  --[%]  Float
   | And  Expr Expr  --[&&] Bool
   | Or   Expr Expr  --[||] Bool
+  | LT   Expr Expr  --[<]  Bool
+  | GT   Expr Expr  --[>]  Bool
+  | LE   Expr Expr  --[<=] Bool
+  | GE   Expr Expr  --[>=] Bool
+  | EQ   Expr Expr  --[==] Bool
+  | NE   Expr Expr  --[!=] Bool
 
 type OutVal
   = OFloat  Float
@@ -231,6 +237,72 @@ evaluate context expr =
      in
      OBool ( a_ || b_)
 
+    -----------------------
+    LT a b ->
+     let
+       a_ = case (evaluate context a) of
+               OFloat n -> n
+               _ -> 0
+       b_ = case (evaluate context b) of
+               OFloat n -> n
+               _ -> 0
+     in
+     OBool ( a_ < b_)
+
+    GT a b ->
+     let
+       a_ = case (evaluate context a) of
+               OFloat n -> n
+               _ -> 0
+       b_ = case (evaluate context b) of
+               OFloat n -> n
+               _ -> 0
+     in
+     OBool ( a_ > b_)
+
+    LE a b ->
+     let
+       a_ = case (evaluate context a) of
+               OFloat n -> n
+               _ -> 0
+       b_ = case (evaluate context b) of
+               OFloat n -> n
+               _ -> 0
+     in
+     OBool ( a_ <= b_)
+
+    GE a b ->
+     let
+       a_ = case (evaluate context a) of
+               OFloat n -> n
+               _ -> 0
+       b_ = case (evaluate context b) of
+               OFloat n -> n
+               _ -> 0
+     in
+     OBool ( a_ >= b_)
+
+    EQ a b ->
+     let
+       a_ = case (evaluate context a) of
+               OFloat n -> n
+               _ -> 0
+       b_ = case (evaluate context b) of
+               OFloat n -> n
+               _ -> 0
+     in
+     OBool ( a_ == b_)
+
+    NE a b ->
+     let
+       a_ = case (evaluate context a) of
+               OFloat n -> n
+               _ -> 0
+       b_ = case (evaluate context b) of
+               OFloat n -> n
+               _ -> 0
+     in
+     OBool ( a_ /= b_)
 
 parse : String -> Result (List DeadEnd) Expr
 parse string__ =
@@ -614,6 +686,13 @@ type Operator = AddOp
               | Div3Op
               | AndOp
               | OrOp
+              | LTOp
+              | GTOp
+              | LEOp
+              | GEOp
+              | EQOp
+              | NEOp
+
 
 
 operator : Parser Operator
@@ -629,6 +708,14 @@ operator =
     , map (\_ -> Div3Op) (symbol "%")
     , map (\_ -> AndOp) (symbol "&&")
     , map (\_ -> OrOp)  (symbol "||")
+    --, map (\_ -> LTOp)  (symbol "<")
+    --, map (\_ -> GTOp)  (symbol ">")
+    , map (\_ -> LEOp)  (symbol "<=")
+    , map (\_ -> GEOp)  (symbol ">=")
+    , map (\_ -> LTOp)  (symbol "<")
+    , map (\_ -> GTOp)  (symbol ">")
+    , map (\_ -> EQOp)  (symbol "==")
+    , map (\_ -> NEOp)  (symbol "!=")
     ]
 
 
@@ -665,6 +752,18 @@ finalize revOps finalExpr =
     (expr, OrOp) :: otherRevOps ->
       Or (finalize otherRevOps expr) finalExpr
 
+    (expr, LTOp) :: otherRevOps ->
+      LT (finalize otherRevOps expr) finalExpr
+    (expr, GTOp) :: otherRevOps ->
+      GT (finalize otherRevOps expr) finalExpr
+    (expr, LEOp) :: otherRevOps ->
+      LE (finalize otherRevOps expr) finalExpr
+    (expr, GEOp) :: otherRevOps ->
+      GE (finalize otherRevOps expr) finalExpr
+    (expr, EQOp) :: otherRevOps ->
+      EQ (finalize otherRevOps expr) finalExpr
+    (expr, NEOp) :: otherRevOps ->
+      NE (finalize otherRevOps expr) finalExpr
 ----------------
 
 strjoin : Context -> Input -> OutVal
@@ -754,4 +853,22 @@ exec str =
 "OString \"abcABCXYZ\"" : Strin
 > exec " \"abc\" + strjoin( \"ABC\", test1) "
 "OString \"abcABCOKOK\"" : String
+
+> exec "1.0 <= 100.1"
+"OBool True" : String
+> exec "1.0 < 100.1"
+"OBool True" : String
+> exec "1.0 > 100.1"
+"OBool False" : String
+> exec "1.0 >= 100.1"
+"OBool False" : String
+> exec "1.0 <= 100.1"
+"OBool True" : String
+> exec "1.0 == 100.1"
+"OBool False" : String
+> exec "1.0 != 100.1"
+"OBool True" : String
+> exec "1.1 == 1.1"
+"OBool True" : String
+
 --}
