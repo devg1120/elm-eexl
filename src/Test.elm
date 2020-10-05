@@ -1,6 +1,7 @@
 module Test exposing (..)
 
-import Eexl.Context as Context exposing (Context)
+--import Eexl.Context as Context exposing (Context)
+import Eexl.Context as Context exposing (..)
 import Eexl.Eexl exposing (evaluateBool, evaluateInt)
 import Eexl.Parse exposing (parse)
 import Array
@@ -41,7 +42,7 @@ r41 = parse (Context.empty |> Context.addFunction "add" add ) "add(\"9\")"      
 --}
 
 
-
+{--
 add :(Array.Array String) -> Int
 add ar  =
    let
@@ -59,3 +60,22 @@ formula2 = """
 
 """
 r42 = parse (Context.empty |> Context.addFunction "add" add ) formula2     --9
+--}
+
+add :(Context ArrayString) -> Int
+add ar  =
+   let
+     a_ = String.toInt (Array.get 0 ar  |> 
+     b_ = String.toInt (Array.get 1 ar  |> 
+   in
+    a_ + b_
+
+
+r41 = parse (Context.empty |> Context.addFu
+
+
+formula2 = """ 
+    add("222","111")
+
+"""
+r42 = parse (Context.empty |> Context.addFu

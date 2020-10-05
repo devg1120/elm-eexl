@@ -120,7 +120,7 @@ var context =
         |. spaces
         |> andThen
             (\name ->
-                Eexl.Context.getConstant name context
+                Context.getConstant name context
                     |> Maybe.map succeed
                     |> Maybe.withDefault (problem <| "Unknown variable '" ++ name ++ "'")
             )
@@ -331,12 +331,12 @@ endHelp ( exprStack, operatorStack ) =
             problem ""
 
 
-expression : Eexl.Context.Context -> Parser T
+expression : Eexl.Context -> Parser T
 expression context =
     expressionHelp context ( [], [] )
 
 
-expressionHelp : Eexl.Context.Context -> ( List T, List Operator ) -> Parser T
+expressionHelp : Eexl.Context -> ( List T, List Operator ) -> Parser T
 expressionHelp context ( exprStack, operatorStack ) =
     -- let
     --     _ =

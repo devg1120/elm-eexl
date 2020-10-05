@@ -1,11 +1,12 @@
-module Eexl.Context exposing
-    ( Context
-    , Input
-    , empty
-    , addConstant, addFunction
-    , getConstant, getFunction
-    )
+--module Eexl.Context exposing
+--    ( Context
+--    , Input
+--    , empty
+--    , addConstant, addFunction
+--    , getConstant, getFunction
+--    )
 
+module Eexl.Context exposing (..)
 
 {-| This module manages the context that an expression runs with. Specifically it is used to assign
 values to constants, and set functions that can be called from the expression.
