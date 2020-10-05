@@ -1,5 +1,6 @@
 module Eexl.Context exposing
     ( Context
+    , Input
     , empty
     , addConstant, addFunction
     , getConstant, getFunction
@@ -43,6 +44,8 @@ values to constants, and set functions that can be called from the expression.
 import Dict exposing (Dict)
 import Array
 
+type Input                                                                  
+    = ArrayString (Array.Array String)  
 
 {-| This is the type of `Context` that is passed into the functions that evaluate expressions.
 -}
@@ -50,7 +53,8 @@ type Context
     = Context
         { constants : Dict String Int
         --, functions : Dict String (String -> Int)
-        , functions : Dict String ((Array.Array String) -> Int)
+        --, functions : Dict String ((Array.Array String) -> Int)
+        , functions : Dict String (Input -> Int)
         }
 
 
@@ -77,7 +81,8 @@ addConstant name value (Context context) =
 {-| Add a function to the context.
 -}
 --addFunction : String -> (String -> Int) -> Context -> Context
-addFunction : String -> ((Array.Array String) -> Int) -> Context -> Context
+--addFunction : String -> ((Array.Array String) -> Int) -> Context -> Context
+addFunction : String -> (Input -> Int) -> Context -> Context
 addFunction name f (Context context) =
     Context
         { context
@@ -95,6 +100,7 @@ getConstant name (Context { constants }) =
 {-| Retrieve a constant from the context (not usually used).
 -}
 --getFunction : String -> Context -> Maybe (String -> Int)
-getFunction : String -> Context -> Maybe ((Array.Array String) -> Int)
+--getFunction : String -> Context -> Maybe ((Array.Array String) -> Int)
+getFunction : String -> Context -> Maybe (Input -> Int)
 getFunction name (Context { functions }) =
     Dict.get name functions

@@ -1,4 +1,5 @@
-module Eexl.Parse exposing (parse)
+--module Eexl.Parse exposing (parse)
+module Eexl.Parse exposing (..)
 
 import Eexl.Context as Context exposing (Context)
 import Eexl.Eval as Eval exposing (T(..))
@@ -6,6 +7,8 @@ import List.Extra
 import Parser exposing (..)
 import Set
 import Array
+
+
 
 type Operator
     = BinaryOp String BinaryOpDef
@@ -247,13 +250,13 @@ func context =
         |> andThen
             (\( name, arg ) ->
                 let
-                  base = Array.fromList arg
+                  base = Context.ArrayString  Array.fromList arg
                 in
                 Context.getFunction name context
                     |> Maybe.map (\fn -> succeed <| fn base)
                     |> Maybe.withDefault (problem <| "Unknown function '" ++ name ++ "'")
             )
-
+{--
 func2 : Context -> Parser Int
 func2 context =
     succeed Tuple.pair
@@ -284,6 +287,7 @@ func2 context =
                     |> Maybe.withDefault (problem <| "Unknown function '" ++ name ++ "'")
             )
 
+--}
 rParenHelp : ( List T, List Operator ) -> Parser ( List T, List Operator )
 rParenHelp ( exprStack, operatorStack ) =
     case ( exprStack, operatorStack ) of
