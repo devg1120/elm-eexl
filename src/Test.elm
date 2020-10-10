@@ -193,11 +193,13 @@ script1 = """
 r100 = parse2 Context.empty  script1
 
 script2 = """
-     a = sum( ) 
+a #     a = sum( ) 
+#     b = sum( ) ;
 12345;
-   b98765 ;
+   str =  関西;  # コメント
+   "9#87#65"  xyz "__#__" "abc # d" # www;
    sun aa ;
-     #   bbb ; 
+   #   bbb  
 """
 script3 = """
     a = sum( ) 
@@ -207,3 +209,5 @@ script3 = """
        bbb ] 
 """
 r101 = parse2 Context.empty  script2
+r102 = Debug.toString (parse2 Context.empty  script2)
+

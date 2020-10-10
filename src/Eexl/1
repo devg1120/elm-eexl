@@ -1,4 +1,4 @@
-module Eexl.Parse exposing (parse, parse2, parse3, parse4)
+module Eexl.Parse exposing (parse, parse2)
 
 import Eexl.Context as Context exposing (Context, Input , ArgValue(..))
 import Eexl.Eval as Eval exposing (T(..))
@@ -7,7 +7,6 @@ import Parser exposing (..)
 import Set
 import Array
 import Regex
-import Char
 
 type Operator
     = BinaryOp String BinaryOpDef
@@ -80,28 +79,9 @@ parse : Context -> String -> Result (List DeadEnd) T
 parse context string =
     run (expression context) string
 
-parse2 : Context -> String -> String
+parse2 : Context -> String -> Result (List DeadEnd) (List Stmt)
 parse2 context string =
-    deleteComment string
-
-parse3 : Context -> String -> String
-parse3 context string =
-    --run (script context) (string ++ ";")
-    let
-      result   = parse4 context string
-    in
-    case result of
-       Ok  stringList ->
-                   List.foldl  (\x a -> x ++ a) "" stringList
-       Err _  ->
-                   "ERR-"
-parse4 : Context -> String -> Result (List DeadEnd) (List Stmt)
-parse4 context string =
-    --run (script context) (string ++ ";")
-    let
-      string2 = deleteComment string
-    in
-    run (script context) (string2 ++ ";")
+    run (script context) string
 
 int : Parser Int
 int =
@@ -544,13 +524,7 @@ endHelp ( exprStack,operatorStack ) =
 
 -----------------------------------------------------------
 type alias Stmt = String
-{--
-type alias Stmt  =
-  { start : (Int, Int)
-  , value : String
-  , end : (Int, Int)
-  }
---}
+
 --script : Context -> Parser T
 script : Context -> Parser (List Stmt)
 script context =
@@ -573,9 +547,10 @@ statements =
 statementsHelp : List Stmt -> Parser (Step (List Stmt) (List Stmt))
 statementsHelp revStmts =
   oneOf
-    [ succeed (\stmt  -> Loop (stmt  :: revStmts))
+    [ succeed (\stmt -> Loop (stmt :: revStmts))
         |. spaces
-        |= statement 
+        --|. symbol "#" |. chompWhile (\c -> c /= '\n')
+        |= statement
         |. spaces
         |. symbol ";"
         |. spaces
@@ -587,13 +562,11 @@ lineCommentWorkAround : String -> Parser ()
 lineCommentWorkAround start =
     succeed () |. symbol start |. chompWhile (\c -> c /= '\n')
 
-statement :  Parser String
-statement  =
-  let _ = Debug.log ("Position::" ++ (Debug.toString getPosition)) in
+statement : Parser String
+statement =
   --getChompedString (chompWhile Char.isDigit)
   getChompedString (chompWhile isUninteresting)
-    |> andThen 
-        statementCheck
+    |> andThen statementCheck
 
 
 isUninteresting : Char -> Bool
@@ -601,162 +574,18 @@ isUninteresting char =
  -- char /= ';' && char /= '\n'
   char /= ';' 
 
-
-stringCharSave : Char -> String -> String
-stringCharSave c str =
-      let
-         code = Char.toCode c
-         code_str = "__char__(" ++ String.fromInt code ++ ")"
-         key = String.fromChar c
-
-         --  "ab sd[key]   "
-         pattern = "\"[^\"]*" ++ key ++ "[^\"]*\""
-
-
-         maybeRegex = Regex.fromString pattern
-         regex = Maybe.withDefault Regex.never maybeRegex
-    
-         ml = Regex.find regex str 
-         ns = if (List.length ml) > 0 then
-              let
-                  --_ = Debug.log ("match: " ++ (Debug.toString ml)) 0
-                  --key_pattern = "#"
-                  key_pattern = key
-                  key_maybeRegex = Regex.fromString key_pattern
-                  key_regex = Maybe.withDefault Regex.never key_maybeRegex
- 
-                  wfunc : Regex.Match -> (String,Int) -> (String,Int)
-                  wfunc entry (str_,pindex) =
-                     let
-                       p_str = Regex.replace key_regex (\_ -> code_str   ) entry.match
-                      
-                       append_str = (String.dropLeft pindex  (String.left entry.index str))  ++
-                               p_str 
-                     in
-                     (str_ ++ append_str,  entry.index + (String.length entry.match))
-
-                  (new_str,last_index) = List.foldl wfunc  ("",0) ml
-                  last_str = String.dropLeft last_index str
-                  _ = Debug.log ("last: " ++ last_str) 0
-              in
-              new_str ++ last_str
-
-             else
-              str
-
-      in
-      ns
-
-stringCharRestore : Char -> String -> String
-stringCharRestore c str =
-      let
-         code = Char.toCode c
-         code_str = "__char__\\(" ++ String.fromInt code ++ "\\)"
-         key = String.fromChar c
-
-         --  "ab sd[key]   "
-         pattern = "\"[^\"]*" ++ code_str ++ "[^\"]*\""
-
-
-         maybeRegex = Regex.fromString pattern
-         regex = Maybe.withDefault Regex.never maybeRegex
-    
-         ml = Regex.find regex str 
-         ns = if (List.length ml) > 0 then
-              let
-                  --_ = Debug.log ("match: " ++ (Debug.toString ml)) 0
-                  key_pattern = code_str
-                  key_maybeRegex = Regex.fromString key_pattern
-                  key_regex = Maybe.withDefault Regex.never key_maybeRegex
- 
-                  wfunc : Regex.Match -> (String,Int) -> (String,Int)
-                  wfunc entry (str_,pindex) =
-                     let
-                       --p_str = Regex.replace key_regex (\_ -> code_str   ) entry.match
-                       p_str = Regex.replace key_regex (\_ -> key   ) entry.match
-                      
-                       append_str = (String.dropLeft pindex  (String.left entry.index str))  ++
-                               p_str 
-                     in
-                     (str_ ++ append_str,  entry.index + (String.length entry.match))
-
-                  (new_str,last_index) = List.foldl wfunc  ("",0) ml
-                  last_str = String.dropLeft last_index str
-                  _ = Debug.log ("last: " ++ last_str) 0
-              in
-              new_str ++ last_str
-
-             else
-              str
-
-      in
-      ns
-
-
-
-
-stringCharRestore2 : Char -> String -> String
-stringCharRestore2 c str =
-      let
-         code = Char.toCode c
-         code_str = String.fromInt code
-         key = String.fromChar c
-      in
-      str
-
 statementCheck : String -> Parser String
-statementCheck code_in =
+statementCheck code =
     --succeed code
     let
-      
-      code = stringCharSave '#' code_in
-      --_ = Debug.log code_in 0
-      --_ = Debug.log ("   " ++ code) 0
-
-      --pattern = "#.*\n|#.*"
-      --pattern = "#.*"
-      pattern = "\n"
+      pattern = "#.*\n"
       maybeRegex = Regex.fromString pattern
       regex = Maybe.withDefault Regex.never maybeRegex
     in
     if Regex.contains regex code then
-      --succeed (Regex.replace regex (\_ -> "") code)
-      let
-        new_code = Regex.replace regex (\_ -> "")  code
-        _ = Debug.log ("new_code:" ++ (Debug.toString new_code)) 0
-        new_code2 = stringCharRestore '#' new_code
-        _ = Debug.log ("new_code2:" ++ (Debug.toString new_code2)) 0
-      in
-      succeed new_code2 
+      succeed code
     else
-      succeed code_in 
-
-deleteComment : String -> String
-deleteComment code_in =
-    --succeed code
-    let
-      
-      code = stringCharSave '#' code_in
-      --_ = Debug.log code_in 0
-      --_ = Debug.log ("   " ++ code) 0
-
-      --pattern = "#.*\n|#.*"
-      pattern = "#.*"
-      maybeRegex = Regex.fromString pattern
-      regex = Maybe.withDefault Regex.never maybeRegex
-    in
-    if Regex.contains regex code then
-      --succeed (Regex.replace regex (\_ -> "") code)
-      let
-        new_code = Regex.replace regex (\_ -> "")  code
-        _ = Debug.log ("new_code:" ++ (Debug.toString new_code)) 0
-        new_code2 = stringCharRestore '#' new_code
-        _ = Debug.log ("new_code2:" ++ (Debug.toString new_code2)) 0
-      in
-      new_code2 
-    else
-      code_in 
-
+      succeed code
 
 zipCode : Parser String
 zipCode =

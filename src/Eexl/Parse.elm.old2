@@ -1,4 +1,4 @@
-module Eexl.Parse exposing (parse, parse2, parse3, parse4)
+module Eexl.Parse exposing (parse, parse2)
 
 import Eexl.Context as Context exposing (Context, Input , ArgValue(..))
 import Eexl.Eval as Eval exposing (T(..))
@@ -80,28 +80,14 @@ parse : Context -> String -> Result (List DeadEnd) T
 parse context string =
     run (expression context) string
 
-parse2 : Context -> String -> String
+parse2 : Context -> String -> Result (List DeadEnd) (List Stmt)
 parse2 context string =
-    deleteComment string
-
-parse3 : Context -> String -> String
-parse3 context string =
     --run (script context) (string ++ ";")
     let
-      result   = parse4 context string
-    in
-    case result of
-       Ok  stringList ->
-                   List.foldl  (\x a -> x ++ a) "" stringList
-       Err _  ->
-                   "ERR-"
-parse4 : Context -> String -> Result (List DeadEnd) (List Stmt)
-parse4 context string =
-    --run (script context) (string ++ ";")
-    let
-      string2 = deleteComment string
+      string2 = scriptCheck string
     in
     run (script context) (string2 ++ ";")
+
 
 int : Parser Int
 int =
@@ -731,8 +717,8 @@ statementCheck code_in =
     else
       succeed code_in 
 
-deleteComment : String -> String
-deleteComment code_in =
+scriptCheck : String -> String
+scriptCheck code_in =
     --succeed code
     let
       
