@@ -10,266 +10,44 @@ import Set
 
 --}
 
-r001 = run int "123456" 
 
------------------------------------------------------------
-{--
-typeVar : Parser String
-typeVar =
-  variable
-    { start = Char.isLower
-    , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "let", "in", "case", "of" ]
-    }
-
-
-r002 = run typeVar "te_001 "
---}
------------------------------------------------------------
-{--
-type alias Point = { x : Float, y : Float }
-
-point : Parser Point
-point =
-  succeed Point
-    |. symbol "("
-    |. spaces
-    |= float
-    |. spaces
-    |. symbol ","
-    |. spaces
-    |= float
-    |. spaces
-    |. symbol ")"
-
-r003 = run point "( 2,3)"
---}
------------------------------------------------------------
-{--
-script_t : Parser String
-script_t =
-  succeed (++)
-    |. symbol "("
-    |. spaces
-    |= typeVar
-    |. spaces
-    |. symbol ","
-    |. spaces
-    |= typeVar
-    |. spaces
-    |. symbol ")"
-
-
-r004 = run script_t "( abc,xyz_)"
---}
------------------------------------------------------------
-{--
-script : Parser (List String)
-script =
-   commands
-commands : Parser String
-commands =
-    loop "" commandsHelp
-     
-commandsHelp : String -> Parser (Step String String)
-commandsHelp str =
-    oneOf
-      [ succeed (\stmt -> Loop (stmt ++ str))
-          |= command
-      , succeed ()
-          --|> map (\_ -> Done (String.reverse str))
-          |> map (\_ -> Done ("--" ++ str ++ "--"))
-      ]
---}
-{--
-script : Parser (List String)
-script =
-   commands
-commands : Parser (List String)
-commands =
-    loop [] commandsHelp
-     
-commandsHelp : List String -> Parser (Step (List String) (List String))
-commandsHelp revStmts =
-    oneOf
-      [ succeed (\stmt -> Loop (stmt :: revStmts))
-          |= command
-      , succeed ()
-          |> map (\_ -> Done (List.reverse revStmts))
-          --|> map (\_ -> Done ("--" ++ str ++ "--"))
-      ]
-
-typeCommand : Parser String
-typeCommand =
-  variable
-    { start = Char.isUpper
-    , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "let", "in", "case", "of" ]
-    }
-
-typeVar : Parser String
-typeVar =
-  variable
-    { start = Char.isLower
-    , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "let", "in", "case", "of" ]
-    }
-
-command : Parser String
-command =
-  --succeed (++)
-  succeed Tuple.pair
-    |. spaces
-    |. symbol "["
-    |. spaces
-    |= typeCommand
-    |. spaces
-    |. symbol ","
-    |. spaces
-    |= typeVar
-    |. spaces
-    |. symbol "]"
-    |. spaces
-    |> andThen
-        (\(cmd,val) ->
-             succeed (cmd ++ ":" ++ val)
-             )
-
-
-input = """
-   [Aaa,a12]
-[Baa,b12]
-[Baa,b12]
-"""
-
-r005 = run script input
-
---}
-
-{--
+---------------------------------------------------------------------
 type alias Name =
     String
 
-type Expr
+type Statement
     = Var Name
-    | If Expr Expr Expr
-    | Cmd Expr Expr
+    | If Statement (List Statement) (List Statement)
+    | While Statement (List Statement) 
+    | For Statement Statement (List Statement) 
+    | Cmd Statement Statement
+    | Blank
 
-script : Parser (List String)
+script : Parser (List Statement)
 script =
    statements
-statements : Parser (List String)
+statements : Parser (List Statement)
 statements =
     loop [] statementsHelp
      
-statementsHelp : List String -> Parser (Step (List String) (List String))
+spaces : Parser ()
+spaces =
+  chompWhile (\c -> c == ' ' || c == '\n' || c == '\r')
+
+statementsHelp : List Statement -> Parser (Step (List Statement) (List Statement))
 statementsHelp revStmts =
     oneOf
       [ succeed (\stmt -> Loop (stmt :: revStmts))
           |= statement
           |. spaces
-          |. symbol ";"
-          |. spaces
+--          |. symbol ";"
+--          |. spaces
       , succeed ()
           |> map (\_ -> Done (List.reverse revStmts))
           --|> map (\_ -> Done ("--" ++ str ++ "--"))
       ]
 
-typeCommand : Parser String
-typeCommand =
-  variable
-    { start = Char.isUpper
-    , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "let", "in", "case", "of" ]
-    }
-
-typeVar : Parser String
-typeVar =
-  variable
-    { start = Char.isLower
-    , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "let", "in", "case", "of" ]
-    }
-
-
-statement : Parser String
-statement =
-   oneOf
-      [ commandStatement
-      , ifStatement
-      ]
-
-commandStatement : Parser String
-commandStatement =
-  --succeed (++)
-  succeed Tuple.pair
-    |. spaces
-    |= typeCommand
-    |. spaces
-    |. symbol ","
-    |. spaces
-    |= typeVar
-    |. spaces
-    |> andThen
-        (\(cmd,val) ->
-             succeed (cmd ++ ":" ++ val)
-             )
-
-ifStatement : Parser String
-ifStatement =
-  --succeed (++)
-  succeed  Tuple.pair
-    |. spaces
-    |= keyword "if"
-    |. spaces
-    |= typeVar
-    |. spaces
-    |> andThen
-        (\(cmd, arg) ->
-             succeed ("IF" ++ ":" ++ arg)
-             )
-input = """
-   Aaa,a12;
-Baa,b12;
-Baa,b12;
-if ccc;
-"""
-
-r005 = run script input
---}
-
-type alias Name =
-    String
-
-type Expr
-    = Var Name
-    --| If Expr Expr Expr
-    | If Expr (List Expr) (List Expr)
-    | While Expr (List Expr) 
-    | For Expr Expr (List Expr) 
-    | Cmd Expr Expr
-
-script : Parser (List Expr)
-script =
-   statements
-statements : Parser (List Expr)
-statements =
-    loop [] statementsHelp
-     
-statementsHelp : List Expr -> Parser (Step (List Expr) (List Expr))
-statementsHelp revStmts =
-    oneOf
-      [ succeed (\stmt -> Loop (stmt :: revStmts))
-          |= statement
-          |. spaces
-          |. symbol ";"
-          |. spaces
-      , succeed ()
-          |> map (\_ -> Done (List.reverse revStmts))
-          --|> map (\_ -> Done ("--" ++ str ++ "--"))
-      ]
-
-typeCommand : Parser Expr
+typeCommand : Parser Statement
 typeCommand =
      succeed Var
         |= variable
@@ -280,7 +58,7 @@ typeCommand =
 
 
 
-typeVar : Parser Expr
+typeVar : Parser Statement
 typeVar =
      succeed Var
         |= variable
@@ -290,15 +68,17 @@ typeVar =
           }
 
 
-statement : Parser Expr
+statement : Parser Statement
 statement =
    oneOf
       [ commandStatement
       , ifStatement
       , whileStatement
+      , forStatement
       ]
 
-commandStatement : Parser Expr 
+
+commandStatement : Parser Statement 
 commandStatement =
   succeed Cmd
     |. spaces
@@ -309,7 +89,7 @@ commandStatement =
     |= typeVar
     |. spaces
 
-ifStatement : Parser Expr 
+ifStatement : Parser Statement 
 ifStatement =
   succeed  If
     |. spaces
@@ -328,7 +108,7 @@ ifStatement =
     |. keyword "end"
     |. spaces
 
-whileStatement : Parser Expr 
+whileStatement : Parser Statement 
 whileStatement =
   succeed  While
     |. spaces
@@ -344,7 +124,7 @@ whileStatement =
     |. spaces
 
 
-forStatement : Parser Expr 
+forStatement : Parser Statement 
 forStatement =
   succeed  For
     |. spaces
@@ -383,20 +163,20 @@ input2 = """
       Ddd,eee;
    end;
    
-   while test do
+   while test1 do
    
       Ddd,a;
       Ddd,a;
    end;
 
-   for test in do
+   for test in range do
    
+      Str, zzzz;
       Ddd,a;
       Ddd,a;
    end;
 
-   for test in do
-   
+   for test in range do
       Ddd,a;
       Ddd,a;
       if ccc then
@@ -410,4 +190,48 @@ input2 = """
    end;
 """
 
+-- run : Result (List Parser.DeadEnd) (List Statement)
 r005 = run script input2
+
+input3 = """
+   Aaa,a12
+   Baa,b12
+   Baa,b12
+
+   if ccc then
+      Ccc,ddd
+      Ccc,ddd
+
+   else 
+      Ddd,eee
+      Ddd,eee
+   end
+   
+   while test1 do
+   
+      Ddd,a
+      Ddd,a
+   end
+
+   for test in range do
+   
+      Str, zzzz
+      Ddd,a
+      Ddd,a
+   end
+
+   for test in range do
+      Ddd,a
+      Ddd,a
+      if ccc then
+         Ccc,ddd
+         Ccc,ddd
+
+      else 
+         Ddd,eee
+         Ddd,eee
+      end
+   end
+"""
+
+r006 = run script input3
