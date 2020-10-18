@@ -1,47 +1,81 @@
-module ParseTests exposing (suite)
+module ExprTests exposing (suite)
 
-import Eexl.Context as Context exposing (Context)
-import Eexl.Eexl exposing (evaluateBool, evaluateInt)
-import Eexl.Parse exposing (parse)
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, int, list, string)
 import Parser exposing (Problem(..))
+import TestExpr exposing (..)
 import Test exposing (..)
 
 
 suite : Test
 suite =
-    describe "Eexl"
+    describe "TestExpr"
         [ literalTests
-        , mathsTests
-        , boolTests
-        , varTests
         , funcTests
-        , realWorldTests
+        , compTests
         ]
 
 
 
-{-
-   unaryOpTests : Test
-   unaryOpTests =
-       describe "unaryOp"
-           [ test "not bool" <|
-               \_ -> Expect.equal (Ok <| Not <| Bool True) (parse Context.empty "!true")
-           , test "multiple" <|
-               \_ -> Expect.equal (Ok <| Not <| Not <| Bool True) (parse Context.empty "!!true")
-           ]
--}
+eqt ans test =
+         Expect.equal ans  test
 
 
 literalTests : Test
 literalTests =
     describe "literals"
+       [ test "01" <| \_ ->  eqt ( "OFloat 7"           )  ( exec " 1 + 3 + (7 // 2)"  ) 
+       , test "02" <| \_ ->  eqt ( "OFloat 7.5"         )  ( exec " 1 + 3 + (7 /  2)"  ) 
+       , test "03" <| \_ ->  eqt ( "OFloat 5"           )  ( exec " 1 + 3 + (7 %  2)"  ) 
+       , test "04" <| \_ ->  eqt ( "OString \"abcABC\"" )  ( exec " \"abc\" + \"ABC\"" ) 
+       , test "05" <| \_ ->  eqt ( "OBool False"        )  ( exec "False" ) 
+       , test "06" <| \_ ->  eqt ( "OBool True"         )  ( exec "True"  ) 
+       , test "07" <| \_ ->  eqt ( "OBool True"         )  ( exec "True  && True"  ) 
+       , test "08" <| \_ ->  eqt ( "OBool False"        )  ( exec "True  && False" ) 
+       , test "09" <| \_ ->  eqt ( "OBool False"        )  ( exec "False && True"  ) 
+       , test "10" <| \_ ->  eqt ( "OBool False"        )  ( exec "False && False" ) 
+       , test "11" <| \_ ->  eqt ( "OBool True"         )  ( exec "True  || True"  ) 
+       , test "12" <| \_ ->  eqt ( "OBool True"         )  ( exec "True  || False" ) 
+       , test "13" <| \_ ->  eqt ( "OBool True"         )  ( exec "False || True"  ) 
+       , test "14" <| \_ ->  eqt ( "OBool False"        )  ( exec "False || False" ) 
+       ]
+
+funcTests : Test
+funcTests =
+    describe "func"
+       [ test "01" <| \_ ->  eqt ( "OString \"abcOKOK\""    )  ( exec " \"abc\" + test1 "  ) 
+       , test "02" <| \_ ->  eqt ( "OFloat 11.2"            )  ( exec " 1.1  + test_flort "  ) 
+       , test "03" <| \_ ->  eqt ( "OString \"abcABCXYZ\""  )  ( exec " \"abc\" + strjoin( \"ABC\", \"XYZ\") " ) 
+       , test "04" <| \_ ->  eqt ( "OString \"abcABCOKOK\"" )  ( exec " \"abc\" + strjoin( \"ABC\", test1)" ) 
+       ]
+
+compTests : Test
+compTests =
+    describe "comp"
+       [ test "01" <| \_ ->  eqt ( "OBool True"         )  ( exec "1.0 <= 100.1 "  ) 
+       , test "02" <| \_ ->  eqt ( "OBool True"         )  ( exec "1.0 <  100.1 "  ) 
+       , test "03" <| \_ ->  eqt ( "OBool False"        )  ( exec "1.0 >  100.1 "  ) 
+       , test "04" <| \_ ->  eqt ( "OBool False"        )  ( exec "1.0 >= 100.1 "  ) 
+       , test "05" <| \_ ->  eqt ( "OBool False"        )  ( exec "1.0 == 100.1 "  ) 
+       , test "06" <| \_ ->  eqt ( "OBool True"         )  ( exec "1.0 != 100.1 "  ) 
+       , test "07" <| \_ ->  eqt ( "OBool True"         )  ( exec "1.1 == 1.1   "  ) 
+       ]
+
+{--
+literalTests : Test
+literalTests =
+    describe "literals"
+       [ test "01" <|  \_ ->  Expect.equal ( "OFloat 7" )  (exec " 1 + 3 + (7 //2)" ) 
+        ]
+--}
+{--
         [ test "true" <|
             \_ ->
                 Expect.equal
-                    (Ok True)
-                    (evaluateBool Context.empty "true")
+                    ( "OFloat 7" )
+                    (exec " 1 + 3 + (7 //2)" )
+--}
+{--
         , test "false" <|
             \_ ->
                 Expect.equal
@@ -53,8 +87,9 @@ literalTests =
                     (Ok n)
                     (evaluateInt Context.empty <| String.fromInt n)
         ]
+--}
 
-
+{--
 mathsTests : Test
 mathsTests =
     describe "Maths"
@@ -246,7 +281,7 @@ realWorldTests =
                     (evaluateBool (makeContext 0 0 1) """correct <= 4 && exerciseScoreWithoutTags("A[1-2]") <= 0""")
         ]
 
-
+--}
 
 {-
    correct <= 4 && (!%'A[1-2]') <= 0

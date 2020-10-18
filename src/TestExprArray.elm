@@ -1,4 +1,4 @@
-module TestExpr exposing (..)
+module TestExprArray exposing (..)
 
 import Parser exposing (..)
 import Dict exposing (Dict)
@@ -14,6 +14,8 @@ type Expr
   = Integer Int
   | Floating Float
   | String String
+  --| Array (Array.Array OutVal)
+  | Array (Array.Array ArgValue)
   | Bool Bool
   --| Variable OutVal
   | Variable String
@@ -37,6 +39,7 @@ type OutVal
   = OFloat  Float
   | OString String
   | OBool Bool
+  | OArray (Array.Array OutVal)
 
 
 --------------------------------------------------------- context
@@ -126,6 +129,25 @@ evaluate context expr =
 
     Bool n ->
      OBool  n
+
+    Array an ->
+     --OArray  n
+     let
+        conv e = 
+           case e of
+              AvInt n -> 
+                  OFloat (toFloat n)
+              AvBool n ->
+                  OBool n
+              AvFloat n ->
+                  OFloat n
+              AvString n ->
+                  OString n
+              AvVar n ->
+                  OString n
+        arr2 = Array.map conv an
+     in
+     OArray arr2
 
     Add a b ->
     {--
@@ -398,6 +420,87 @@ typevarHelp =
     , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
     }
 
+{--
+array : Parser Expr
+array =
+  --succeed (String identity)
+  succeed (\identity -> String identity)
+    |. token "["
+    |= loop [] arrayHelp
+
+
+arrayHelp : List String -> Parser (Step (List String) String)
+arrayHelp revChunks =
+  oneOf
+    [ succeed (\chunk -> Loop (chunk :: revChunks))
+        |. token "\\"
+        |= oneOf
+            [ map (\_ -> "\n") (token "n")
+            , map (\_ -> "\t") (token "t")
+            , map (\_ -> "\r") (token "r")
+            , succeed String.fromChar
+                |. token "u{"
+                |= unicode
+                |. token "}"
+            ]
+    , token "]"
+        |> map (\_ -> Done (String.join "" (List.reverse revChunks)))
+    , chompWhile isUninteresting
+        |> getChompedString
+        |> map (\chunk -> Loop (chunk :: revChunks))
+    ]
+--}
+
+array : Parser Expr
+array =
+    succeed Tuple.pair
+        |. backtrackable (symbol "[")
+        |= arrayValues 
+        |= symbol "]"
+        |> andThen
+            (\( arg, a)  ->
+                let
+                  base = Array.fromList arg
+
+                in
+                succeed (Array base)
+            )
+
+arrayValues :  Parser (List ArgValue)
+arrayValues  =
+  succeed (::)
+    |. spaces
+    |= oneOf
+        [ backtrackable  stringValue
+        , backtrackable  intValue
+        , backtrackable  floatValue
+        , varValue
+        ]
+    |. spaces
+    |= arrayValuesTail 
+    |> andThen
+            (\( arg ) ->
+                 succeed (arg)
+            )
+
+arrayValuesTail :  Parser (List ArgValue)
+arrayValuesTail  =
+  oneOf
+    [ succeed (::)
+        |. symbol ","
+        |. spaces
+        |= oneOf
+            [ backtrackable  stringValue
+            , backtrackable  intValue
+            , backtrackable  floatValue
+            , varValue
+            ]
+        |. spaces
+        |= lazy (\_ ->  arrayValuesTail )
+    , succeed []
+    ]
+
+
 ----------------------------------------------------------
 -- FUNC def  start 
 ----------------------------------------------------------
@@ -629,6 +732,7 @@ term =
     |= oneOf
          --[ digits
          [ backtrackable string
+         , backtrackable array
          , backtrackable func
          , backtrackable typevar
          --, backtrackable func
@@ -877,5 +981,8 @@ exec str =
 
                                 --array
 > exec " [ 1,2,3,4,5] "
-> exec " [ "1","2","3","4","5"] "
+"OArray (Array.fromList [OFloat 1,OFloat 2,OFloat 3])" : String
+
+> exec " [ \"1\",\"2\",\"3\",\"4\",\"5\"] "
+
 --}
