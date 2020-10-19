@@ -51,7 +51,6 @@ spaces =
   chompWhile (\c -> c == ' ' || c == '\n' || c == '\r')
 
 
-
 spsWorkAround : Parser ()
 spsWorkAround =
    loop 0 <| ifProgress <|
@@ -71,6 +70,38 @@ ifProgress p offset =
     |. p
     |= getOffset
     |> map (\newOffset -> if offset == newOffset then Done () else Loop newOffset)
+
+{--
+statementsHelp : List Statement -> Parser (Step (List Statement) (List Statement))
+statementsHelp revStmts =
+    oneOf
+      [ succeed (\stmt -> Loop (stmt :: revStmts))
+          |. spsWorkAround
+          |= statement
+          |. spsWorkAround
+          |. spaces
+          |. symbol ";"
+          |. spaces
+      , succeed ()
+          |> map (\_ -> Done (List.reverse revStmts))
+          --|> map (\_ -> Done ("--" ++ str ++ "--"))
+      ]
+
+
+statementsHelp2 : List Statement -> Parser (Step (List Statement) (List Statement))
+statementsHelp2 revStmts =
+    oneOf
+      [ succeed (\stmt -> Loop (stmt :: revStmts))
+          |= statement
+          |. spaces
+          |. symbol ";"
+          |. spaces
+      , succeed ()
+          |> map (\_ -> Done (List.reverse revStmts))
+          --|> map (\_ -> Done ("--" ++ str ++ "--"))
+      ]
+
+--}
 
 
 
@@ -148,7 +179,6 @@ assignStatement =
     --|= typeVar
     |= expression
     |. spaces
-    |. symbol ";"
 
 ifStatement : Parser Statement 
 ifStatement =
@@ -216,50 +246,30 @@ if ccc then ddd else eee;
 -- run : Result (List Parser.DeadEnd) (List Statement)
 -- r005 = run script input2
 
-input5 = """
-   aaa = 100;
-   bbb = 200;
-
-/*
- 2224
-*/
-
-
-
-
-"""
-
 input3 = """
-   aaa = 100;
-   bbb = 200;
-   ccc = "XYZ";
-   ddd = [1,2,3];
-   eee = { "p1" : 10, "p2" : 20 , "p3" : 30};
+   aaa = 100
+   bbb = 200
+   ccc = "XYZ"
 
 
    if aaa > bbb then
-      aa = 1;
-      bb = 2;
+      aa = 1
+      bb = 2
     else 
-      aa = 3;
-      bb=  4;
-      cc = aa + bb;
+      aa = 3
+      bb=  4
+      cc = aa + bb
    end
 
-   f1 = 1;
-   f2 = 10;
-   cnt = 0;
+   f1 = 1
+   f2 = 10
+   cnt = 0
 
    while f1 < f2 do
-       cnt = cnt + 1;
-       f1 = f1 + 1;
+       cnt = cnt + 1
+       f1 = f1 + 1
    end
-
-   f1 = 1;
-   ccc = [100,101,102,103,104];
-//ok
-  /*
-   --
+/*
       if ccc then
          ccc = ddd
          ccc = ddd
@@ -410,11 +420,6 @@ evalStep arr pos context =
                                "false"
                      OFloat f ->
                                "false"
-                     OArray _ ->
-                               "false"
-                     ODict _ ->
-                               "false"
-
                context_2 = case a_ of
                      OBool True ->  -- then
                               evalStep (Array.fromList b) 0 context
@@ -423,10 +428,6 @@ evalStep arr pos context =
                      OString s ->
                               context
                      OFloat f ->
-                              context
-                     OArray _ ->
-                              context
-                     ODict _ ->
                               context
             in         
             --addConstant name a_ context_2 
