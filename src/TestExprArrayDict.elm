@@ -106,7 +106,7 @@ evaluate context expr =
                       Just v ->
                              v
                       _ ->
-                             (OString "not_found")
+                             (OString ("not_found constant:" ++ name))
        in
        result
      
@@ -117,7 +117,7 @@ evaluate context expr =
                      Just f ->
                             (f context args)
                      _ ->
-                            (OString " !!not_found")
+                            (OString ("not_found function:" ++ name))
          in
          ans
 
@@ -135,11 +135,11 @@ evaluate context expr =
                                   Just a2_ ->
                                          a2_
                                   _ ->
-                                         (OString " !!not_found")
+                                         (OString " !!not_found arrayIndex")
                             _ ->
-                                  (OString " !!not_found")
+                                  (OString " !!not_found arrayIndex")
                      _ ->
-                           (OString " !!not_found")
+                           (OString " !!not_found ArrayIndex")
          in
          ans
          --(OString " !!array_index")
@@ -158,11 +158,11 @@ evaluate context expr =
                                   Just d2_ ->
                                          d2_
                                   _ ->
-                                         (OString " !!not_found")
+                                         (OString " !!not_found dictlookup")
                             _ ->
-                                  (OString " !!not_found")
+                                  (OString " !!not_found dict lookuo")
                      _ ->
-                           (OString " !!not_found")
+                           (OString " !!not_found dict lookup")
          in
          ans
          --(OString " !!array_index")
@@ -181,11 +181,11 @@ evaluate context expr =
                                   Just d2_ ->
                                          d2_
                                   _ ->
-                                         (OString " !!not_found")
+                                         (OString " !!not_found dictIndex")
                             _ ->
-                                  (OString " !!not_found")
+                                  (OString " !!not_found dictIndex")
                      _ ->
-                           (OString " !!not_found")
+                           (OString " !!not_found dictIndex")
          in
          ans
          --(OString " !!array_index")

@@ -24,7 +24,8 @@ type Statement
     = Var Name
     | If Expr (List Statement) (List Statement)
     | While Expr (List Statement) 
-    | For Statement Statement (List Statement) 
+    --| For Statement Statement (List Statement) 
+    | For Expr Expr (List Statement) 
     | Assign Expr Expr
     --| Assign Statement Expr
     | Blank
@@ -193,11 +194,13 @@ forStatement =
     |. spaces
     |. keyword "for"
     |. spaces
-    |= lazy (\_ -> typeVar)
+    --|= lazy (\_ -> typeVar)
+    |= lazy (\_ -> expression)
     |. spaces
     |. keyword "in"
     |. spaces
-    |= lazy (\_ -> typeVar)
+    --|= lazy (\_ -> typeVar)
+    |= lazy (\_ -> expression)
     |. spaces
     |. keyword "do"
     |. spaces
@@ -230,6 +233,17 @@ input5 = """
 """
 
 input3 = """
+   total = 0;
+
+   for ok in [1,2,3] do
+
+    total = total + ok;
+    //total =  ok;
+
+
+   
+   end
+
    aaa = 100;
    bbb = 200;
    ccc = "XYZ";
@@ -257,6 +271,8 @@ input3 = """
 
    f1 = 1;
    ccc = [100,101,102,103,104];
+
+   
 //ok
   /*
    --
@@ -382,6 +398,73 @@ evalWhile expr arr  context =
             _ -> 
                  context
 
+{--
+myFoldl : (a -> b -> b) -> b -> List a -> b
+myFoldl func acc list =
+    case list of
+        [] ->
+            acc
+
+        x :: xs ->
+            myFoldl func (func x acc) xs
+--}
+{--
+evalForHelp : (a -> b -> b) -> b -> List a -> b
+evalForHelp func acc list =
+    case list of
+        [] ->
+            acc
+
+        x :: xs ->
+            myFoldl func (func x acc) xs
+--}
+
+evalForHelp : String -> Array.Array OutVal ->  (Array.Array Statement)  -> Context -> Context
+evalForHelp name array stmt context =
+        let
+{--
+          context_ =  case (Array.get 0 array) of
+                             Just (OFloat a) ->
+                               addConstant name  (OFloat a) context
+                             _ ->
+                               context
+--}
+
+          context_ =  case (Array.get 0 array) of
+                             Just a ->
+                               addConstant name  a context
+                             _ ->
+                               context
+
+          context_3 = evalStep  stmt 0 context_
+
+          array2 = Array.slice 1 (Array.length array) array
+        in
+        if (Array.length array2) > 0 then
+           evalForHelp name array2 stmt context_3
+        else
+           context_3
+
+evalFor : Expr -> Expr -> (Array.Array Statement)  -> Context -> Context
+evalFor val array stmt  context =
+     let
+        --val_  = evaluate context val
+        val2 = case val of
+                  --OString a ->
+                  Variable a ->
+                          a
+                  _ ->
+                          "not"
+
+        array_ = evaluate context array
+     in
+     case array_ of
+            OArray a_ ->  
+                 evalForHelp val2 a_ stmt  context
+
+            _ -> 
+                 context
+
 
 evalStep : (Array.Array Statement) -> Int -> Context -> Context
 evalStep arr pos context =
@@ -434,6 +517,10 @@ evalStep arr pos context =
 
         Just (While a b ) ->
             evalWhile a (Array.fromList b) context
+
+
+        Just (For a b c) ->
+            evalFor a b (Array.fromList c) context
 
         _ ->
             context
