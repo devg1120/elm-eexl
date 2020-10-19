@@ -4,5 +4,8 @@
     "chance": "^1.0.18",
     "elm-format": "^0.8.1",
     "tmp": "^0.0.33"
+  },
+  "devDependencies": {
+    "elm-test": "^0.19.1-revision4"
   }
 }
