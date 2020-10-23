@@ -235,7 +235,7 @@ input5 = """
 input3 = """
    total = 0;
 
-   for ok in [1,2,3] do
+   for ok in [1,2,3,100] do
 
     total = total + ok;
     //total =  ok;
