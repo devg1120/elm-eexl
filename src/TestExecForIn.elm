@@ -26,6 +26,8 @@ type Statement
     | IfThenElse Expr (List Statement) (List Statement)
     | IfThenElsIfThen Expr (List Statement) (List (Expr,(List Statement)))
     | IfThenElsIfThenElse Expr (List Statement) (List (Expr,(List Statement))) (List Statement)
+    | Case        Expr  (List (Expr,(List Statement)))
+    | CaseDefault Expr  (List (Expr,(List Statement))) (List Statement)
     | While Expr (List Statement) 
     --| For Statement Statement (List Statement) 
     | For Expr Expr (List Statement) 
@@ -114,7 +116,7 @@ typeName =
         |= variable
            { start = Char.isLower
            , inner = \c -> Char.isAlphaNum c || c == '_'
-           , reserved = Set.fromList [ "if", "then", "else","elsif", "end", "while", "do","in", "for"  ]
+           , reserved = Set.fromList [ "if", "then", "else","elsif", "end", "while", "do","in", "for", "case", "default"  ]
            }
 
 
@@ -125,8 +127,8 @@ typeVar =
         |= variable
           { start = Char.isLower
           , inner = \c -> Char.isAlphaNum c || c == '_'
-          --, reserved = Set.fromList [ "let", "in", "case", "of" ]
-          , reserved = Set.fromList [ "if", "then", "else","elsif","end", "while", "do","in", "for"  ]
+          --, reserved = Set.fromList [ "let", "in", "case", "default", "of" ]
+          , reserved = Set.fromList [ "if", "then", "else","elsif","end", "while", "do","in", "for" , "case", "default" ]
           }
 
 
@@ -138,6 +140,7 @@ statement =
       , backtrackable ifStatement   -- if then else
       , backtrackable ifStatement3  -- if then elsif else
       , backtrackable ifStatement4  -- if then elsif
+      , backtrackable caseStatement -- case
       --, ifStatement2  -- if then
       , whileStatement
       , forStatement
@@ -275,6 +278,68 @@ ifStatement4 =
     |. keyword "end"
     |. spaces
 
+caseStatement : Parser Statement 
+caseStatement =
+  succeed  Case
+    |. spaces
+    |. keyword "case"
+    |. spaces
+    |= lazy (\_ -> expression)
+    |. spaces
+    |. keyword "do"
+    |. spaces
+    |= lazy (\_ -> caseBlocks)
+    |. spaces
+    |. keyword "end"
+    |. spaces
+
+caseBlock :  Parser (Expr,(List Statement))
+caseBlock  =
+  succeed Tuple.pair
+    |. spaces
+    |= lazy (\_ -> expression)
+    |. spaces
+    |. symbol ":"
+    |. spaces
+    |= lazy (\_ -> statements)
+    |. spaces
+
+{--
+caseBlockDefault :  Parser (Expr,(List Statement))
+caseBlockDefault  =
+  succeed Tuple.pair
+    |. spaces
+    |= keyword "default"
+    |. spaces
+    |. symbol ":"
+    |. spaces
+    |= lazy (\_ -> statements)
+    |. spaces
+--}
+
+caseBlocks :  Parser (List (Expr,(List Statement)))
+caseBlocks  =
+  succeed (::)
+    |. spaces
+    |= lazy (\_ -> caseBlock)
+    |. spaces
+    |= caseBlocksTail 
+    |> andThen
+            (\( b ) ->
+                 succeed (b)
+            )
+
+caseBlocksTail :  Parser (List (Expr,(List Statement)))
+caseBlocksTail  =
+  oneOf
+    [ succeed (::)
+        |. spaces
+        |= lazy (\_ -> caseBlock)
+        |. spaces
+        |= lazy (\_ ->  caseBlocksTail )
+    , succeed []
+    ]
+
 whileStatement : Parser Statement 
 whileStatement =
   succeed  While
@@ -390,6 +455,20 @@ input3 = """
     elsif  xa < xd then
       x=  3;
    end
+
+ca = 2;
+re = 0;
+case ca do
+    0:
+       re = 1;
+    1:
+       re = 2;
+    2:
+       re = 3;
+
+//default:
+//     re = 5;
+end
 
 
 """
@@ -724,6 +803,32 @@ evalElsIfs2   exprStmts   context =
             --addConstant name a_ context_2 
             context_2 
 
+evalCaseSwitch :  OutVal -> (List (Expr,(List Statement))) ->  Context -> Context
+evalCaseSwitch   target exprStmts   context =
+         let
+             (expr, stmts ) = case (List.head exprStmts) of
+                                     Just a -> 
+                                              a
+                                     _ ->
+                                              (Bool False, [])
+             a_ = evaluate context expr
+             cond = target == a_
+
+             context_2 = case cond of
+                      True ->  
+                              evalStep (Array.fromList stmts) 0 context
+                      False -> 
+                              let
+                                new_exprStmts = List.drop 1 exprStmts
+                              in
+                              if (List.length new_exprStmts) > 0 then
+                                 evalCaseSwitch target  new_exprStmts  context
+
+                              else
+                                 context
+            in         
+            context_2 
+
 evalStep : (Array.Array Statement) -> Int -> Context -> Context
 evalStep arr pos context =
     let
@@ -871,6 +976,45 @@ evalStep arr pos context =
                               context
                      ODict _ ->
                               context
+            in         
+            --addConstant name a_ context_2 
+            context_2 
+
+        Just (Case a b  ) ->
+            let
+               a_ = evaluate context a
+               name = case a_ of
+                     OBool True ->  -- then
+                               "true"
+                     OBool False -> -- else
+                               "false"
+                     OString s ->
+                               "false"
+                     OFloat f ->
+                               "false"
+                     OArray _ ->
+                               "false"
+                     ODict _ ->
+                               "false"
+
+               context_2 = evalCaseSwitch a_ b  context
+
+               {--
+               context_2 = case a_ of
+                     OBool True ->  -- then
+                              evalStep (Array.fromList b) 0 context
+                     OBool False -> -- else
+                              --evalElsIfs2 c  context
+                              evalCaseSwitch c  context
+                     OString s ->
+                              context
+                     OFloat f ->
+                              context
+                     OArray _ ->
+                              context
+                     ODict _ ->
+                              context
+               --}
             in         
             --addConstant name a_ context_2 
             context_2 
