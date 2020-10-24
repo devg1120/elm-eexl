@@ -24,8 +24,6 @@ type Statement
     = Var Name
     | IfThen Expr (List Statement) 
     | IfThenElse Expr (List Statement) (List Statement)
-    | IfThenElsIfThen Expr (List Statement) (List (Expr,(List Statement)))
-    | IfThenElsIfThenElse Expr (List Statement) (List (Expr,(List Statement))) (List Statement)
     | While Expr (List Statement) 
     --| For Statement Statement (List Statement) 
     | For Expr Expr (List Statement) 
@@ -114,7 +112,7 @@ typeName =
         |= variable
            { start = Char.isLower
            , inner = \c -> Char.isAlphaNum c || c == '_'
-           , reserved = Set.fromList [ "if", "then", "else","elsif", "end", "while", "do","in", "for"  ]
+           , reserved = Set.fromList [ "if", "then", "else","end", "while", "do","in", "for"  ]
            }
 
 
@@ -126,7 +124,7 @@ typeVar =
           { start = Char.isLower
           , inner = \c -> Char.isAlphaNum c || c == '_'
           --, reserved = Set.fromList [ "let", "in", "case", "of" ]
-          , reserved = Set.fromList [ "if", "then", "else","elsif","end", "while", "do","in", "for"  ]
+          , reserved = Set.fromList [ "if", "then", "else","end", "while", "do","in", "for"  ]
           }
 
 
@@ -136,8 +134,6 @@ statement =
       [ assignStatement
       , backtrackable ifStatement2  -- if then
       , backtrackable ifStatement   -- if then else
-      , backtrackable ifStatement3  -- if then elsif else
-      , backtrackable ifStatement4  -- if then elsif
       --, ifStatement2  -- if then
       , whileStatement
       , forStatement
@@ -189,89 +185,6 @@ ifStatement2 =
     |. spaces
     |= lazy (\_ -> statements)
     |. spaces
-    |. keyword "end"
-    |. spaces
-
-
-elsIfBlock :  Parser (Expr,(List Statement))
-elsIfBlock  =
-  succeed Tuple.pair
-    |. spaces
-    |. keyword "elsif"
-    |. spaces
-    |= lazy (\_ -> expression)
-    |. spaces
-    |. keyword "then"
-    |. spaces
-    |= lazy (\_ -> statements)
-    |. spaces
-   -- |> andThen
-   --      (\( expr, stmts) ->
-   --           (expr, stmts)
-   --      )
-
-elsIfBlocks :  Parser (List (Expr,(List Statement)))
-elsIfBlocks  =
-  succeed (::)
-    |. spaces
-    |= lazy (\_ -> elsIfBlock)
-    |. spaces
-    |= elsIfBlocksTail 
-    |> andThen
-            (\( b ) ->
-                 succeed (b)
-            )
-
-elsIfBlocksTail :  Parser (List (Expr,(List Statement)))
-elsIfBlocksTail  =
-  oneOf
-    [ succeed (::)
-        |. spaces
-        |= lazy (\_ -> elsIfBlock)
-        |. spaces
-        |= lazy (\_ ->  elsIfBlocksTail )
-    , succeed []
-    ]
-
-ifStatement3 : Parser Statement 
-ifStatement3 =
-  succeed  IfThenElsIfThenElse
-    |. spaces
-    |. keyword "if"
-    |. spaces
-    |= lazy (\_ -> expression)
-    |. spaces
-    |. keyword "then"
-    |. spaces
-    |= lazy (\_ -> statements)
-    |. spaces
-    |= lazy (\_ -> elsIfBlocks)
-    |. spaces
-    |. keyword "else"
-    |. spaces
-    |= lazy (\_ -> statements)
-    |. spaces
-    |. keyword "end"
-    |. spaces
-
-ifStatement4 : Parser Statement 
-ifStatement4 =
-  succeed  IfThenElsIfThen
-    |. spaces
-    |. keyword "if"
-    |. spaces
-    |= lazy (\_ -> expression)
-    |. spaces
-    |. keyword "then"
-    |. spaces
-    |= lazy (\_ -> statements)
-    |. spaces
-    |= lazy (\_ -> elsIfBlocks)
-    |. spaces
-    --|. keyword "else"
-    --|. spaces
-    --|= lazy (\_ -> statements)
-    --|. spaces
     |. keyword "end"
     |. spaces
 
@@ -354,7 +267,7 @@ input3 = """
    end
 
    if aaa < bbb then
-      aa = aa + 2;
+      aa = aa + 1;
    end
 
 
@@ -365,18 +278,17 @@ input3 = """
 
    z = 0;
 
-   if za > zb then
+   if za < zb then
       z = 1;
-    elsif  za > zc then
+    elsif  za < zc then
       z=  2;
-    elsif  za > zd then
+    elsif  za < zd then
       z=  3;
     else 
       z=  4;
    end
 
-
-   xa = 350;
+   xa = 100;
    xb = 200;
    xc = 300;
    xd = 400;
@@ -389,8 +301,9 @@ input3 = """
       x=  2;
     elsif  xa < xd then
       x=  3;
+    else 
+      x=  4;
    end
-
 
 """
 
@@ -627,102 +540,6 @@ evalFor val array stmt  context =
             _ -> 
                  context
 
-evalElsIfs :  (List (Expr,(List Statement))) -> (List Statement) -> Context -> Context
-evalElsIfs   exprStmts  elseStmts  context =
-         let
-             (expr, stmts ) = case (List.head exprStmts) of
-                                     Just a -> 
-                                              a
-                                     _ ->
-                                              (Bool False, [])
-             a_ = evaluate context expr
-             name = case a_ of
-                     OBool True ->  -- then
-                               "true"
-                     OBool False -> -- else
-                               "false"
-                     OString s ->
-                               "false"
-                     OFloat f ->
-                               "false"
-                     OArray _ ->
-                               "false"
-                     ODict _ ->
-                               "false"
-
-             context_2 = case a_ of
-                     OBool True ->  -- then
-                              evalStep (Array.fromList stmts) 0 context
-                     OBool False -> -- else
-                              let
-                                new_exprStmts = List.drop 1 exprStmts
-                              in
-                              if (List.length new_exprStmts) > 0 then
-                                 evalElsIfs   new_exprStmts  elseStmts context
-
-                              else
-                                 evalStep (Array.fromList elseStmts) 0 context
-
-                     OString s ->
-                              context
-                     OFloat f ->
-                              context
-                     OArray _ ->
-                              context
-                     ODict _ ->
-                              context
-            in         
-            --addConstant name a_ context_2 
-            context_2 
-
-
-evalElsIfs2 :  (List (Expr,(List Statement))) ->  Context -> Context
-evalElsIfs2   exprStmts   context =
-         let
-             (expr, stmts ) = case (List.head exprStmts) of
-                                     Just a -> 
-                                              a
-                                     _ ->
-                                              (Bool False, [])
-             a_ = evaluate context expr
-             name = case a_ of
-                     OBool True ->  -- then
-                               "true"
-                     OBool False -> -- else
-                               "false"
-                     OString s ->
-                               "false"
-                     OFloat f ->
-                               "false"
-                     OArray _ ->
-                               "false"
-                     ODict _ ->
-                               "false"
-
-             context_2 = case a_ of
-                     OBool True ->  -- then
-                              evalStep (Array.fromList stmts) 0 context
-                     OBool False -> -- else
-                              let
-                                new_exprStmts = List.drop 1 exprStmts
-                              in
-                              if (List.length new_exprStmts) > 0 then
-                                 evalElsIfs2   new_exprStmts  context
-
-                              else
-                                 context
-
-                     OString s ->
-                              context
-                     OFloat f ->
-                              context
-                     OArray _ ->
-                              context
-                     ODict _ ->
-                              context
-            in         
-            --addConstant name a_ context_2 
-            context_2 
 
 evalStep : (Array.Array Statement) -> Int -> Context -> Context
 evalStep arr pos context =
@@ -806,75 +623,6 @@ evalStep arr pos context =
             in         
             --addConstant name a_ context_2 
             context_2 
-
-        Just (IfThenElsIfThenElse a b c d) ->
-            let
-               a_ = evaluate context a
-               name = case a_ of
-                     OBool True ->  -- then
-                               "true"
-                     OBool False -> -- else
-                               "false"
-                     OString s ->
-                               "false"
-                     OFloat f ->
-                               "false"
-                     OArray _ ->
-                               "false"
-                     ODict _ ->
-                               "false"
-
-               context_2 = case a_ of
-                     OBool True ->  -- then
-                              evalStep (Array.fromList b) 0 context
-                     OBool False -> -- else
-                              evalElsIfs c d context
-                     OString s ->
-                              context
-                     OFloat f ->
-                              context
-                     OArray _ ->
-                              context
-                     ODict _ ->
-                              context
-            in         
-            --addConstant name a_ context_2 
-            context_2 
-
-        Just (IfThenElsIfThen a b c ) ->
-            let
-               a_ = evaluate context a
-               name = case a_ of
-                     OBool True ->  -- then
-                               "true"
-                     OBool False -> -- else
-                               "false"
-                     OString s ->
-                               "false"
-                     OFloat f ->
-                               "false"
-                     OArray _ ->
-                               "false"
-                     ODict _ ->
-                               "false"
-
-               context_2 = case a_ of
-                     OBool True ->  -- then
-                              evalStep (Array.fromList b) 0 context
-                     OBool False -> -- else
-                              evalElsIfs2 c  context
-                     OString s ->
-                              context
-                     OFloat f ->
-                              context
-                     OArray _ ->
-                              context
-                     ODict _ ->
-                              context
-            in         
-            --addConstant name a_ context_2 
-            context_2 
-
         Just (While a b ) ->
             evalWhile a (Array.fromList b) context
 

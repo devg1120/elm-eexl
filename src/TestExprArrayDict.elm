@@ -505,7 +505,7 @@ typevarHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for"]
     }
 
 {--
@@ -764,7 +764,7 @@ varValueHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for"]
     }
 ---------------------------------------------
 {--
@@ -890,7 +890,7 @@ array_index  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for"]
                 }
              
         |. symbol "["
@@ -917,7 +917,7 @@ dict_lookup  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for"]
                 }
              
         |. symbol "."
@@ -926,7 +926,7 @@ dict_lookup  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for"]
                 }
              
         |> andThen
@@ -950,7 +950,7 @@ dict_index  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "while" , "do", "end", "for"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for"]
                 }
              
         |. symbol "{"
