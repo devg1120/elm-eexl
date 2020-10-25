@@ -456,7 +456,7 @@ input3 = """
       x=  3;
    end
 
-ca = 2;
+ca = 6;
 re = 0;
 case ca do
     0:
@@ -466,8 +466,8 @@ case ca do
     2:
        re = 3;
 
-//default:
-//     re = 5;
+default:
+     re = 5;
 end
 
 
@@ -812,7 +812,13 @@ evalCaseSwitch   target exprStmts   context =
                                      _ ->
                                               (Bool False, [])
              a_ = evaluate context expr
-             cond = target == a_
+             --cond = target == a_
+
+             cond = case expr of 
+                         Default a ->
+                              True
+                         _ ->
+                              target == a_
 
              context_2 = case cond of
                       True ->  

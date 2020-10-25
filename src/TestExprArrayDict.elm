@@ -14,6 +14,7 @@ type Expr
   = Integer Int
   | Floating Float
   | String String
+  | Default Int
   --| Array (Array.Array OutVal)
   | Array (Array.Array ArgValue)
   | Dict (Dict String ArgValue)
@@ -414,6 +415,9 @@ evaluate context expr =
      in
      OBool ( a_ /= b_)
 
+    Default a  ->
+     OBool True
+
 parse : String -> Result (List DeadEnd) Expr
 parse string__ =
   run expression string__
@@ -505,8 +509,13 @@ typevarHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "default"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case"]
     }
+
+default : Parser Expr
+default =
+  succeed ( Default 1)
+    |. keyword "default"
 
 {--
 array : Parser Expr
@@ -764,7 +773,7 @@ varValueHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "default"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case"]
     }
 ---------------------------------------------
 {--
@@ -890,7 +899,7 @@ array_index  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "default"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case"]
                 }
              
         |. symbol "["
@@ -917,7 +926,7 @@ dict_lookup  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "default"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case"]
                 }
              
         |. symbol "."
@@ -926,7 +935,7 @@ dict_lookup  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "default"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case"]
                 }
              
         |> andThen
@@ -950,7 +959,7 @@ dict_index  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "default"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case"]
                 }
              
         |. symbol "{"
@@ -1028,6 +1037,7 @@ term =
          , backtrackable array_index
          , backtrackable dict_lookup
          , backtrackable dict_index
+         , backtrackable default
          , backtrackable typevar
          , backtrackable digits
          , bool
