@@ -51,6 +51,125 @@ type OutVal
   | ODict  (Dict String OutVal)
 
 
+--------------------------------------------------------- stack
+
+dicGetSerch : List (Dict.Dict String OutVal) -> String -> Result String OutVal
+dicGetSerch list name =
+     let
+        dict_ =  List.head list  |> Maybe.withDefault Dict.empty
+        value = Dict.get name dict_
+     in
+       case value of
+          Just a ->
+                Ok  a
+          _ ->
+             let
+               new_list = List.drop 1 list
+             in
+             if List.isEmpty new_list then
+                Err ("dicGetSerch...not found:" ++ name)
+             else
+                dicGetSerch new_list name
+
+                 
+
+
+dicGet : String -> Stack.Stack (Dict.Dict String OutVal) -> Result String OutVal
+dicGet name  stackdic =
+      let
+       list = Stack.toList stackdic
+      in
+      dicGetSerch list name
+
+
+
+
+dicSetUpdate : String -> OutVal ->  Stack.Stack (Dict.Dict String OutVal) ->  Result String (Stack.Stack (Dict.Dict String OutVal))
+dicSetUpdate name value stackdic =
+     let
+        (dict1, stack_) =  Stack.pop stackdic  
+        dict2 = case dict1 of
+                   Just dict_ ->
+                            dict_
+                   _ ->
+                            Dict.empty
+        value2 = Dict.get name dict2
+     in
+       case value2 of
+          Just a ->
+                let 
+                 tmp_dict = Dict.insert name value dict2
+                in
+                Ok (Stack.push tmp_dict stack_)
+          _ ->
+             let
+               tmp_list = Stack.toList stack_
+
+             in
+             if List.isEmpty tmp_list then
+                Err ("dicSetUpdate...not found:" ++ name)
+             else
+              let
+                new_stack_pair = dicSetUpdate  name value stack_ 
+              in
+                case new_stack_pair of
+                    Ok new_stack_ ->
+                          Ok (Stack.push dict2 new_stack_)
+                    Err str ->
+                          Err str
+
+dicSet : String -> OutVal -> Stack.Stack (Dict.Dict String OutVal) -> Result String (Stack.Stack (Dict.Dict String OutVal))
+dicSet name value stackdic =
+      let
+       result = dicSetUpdate name value stackdic 
+      in
+      result
+
+{--
+dicSet : String -> OutVal -> Stack.Stack (Dict.Dict String OutVal) -> Stack.Stack (Dict.Dict String OutVal)
+dicSet name value stackdic =
+      let
+       result = dicSetUpdate name value stackdic 
+      in
+      case result of
+           Ok a ->
+                a
+           Err a ->
+                stackdic
+--}
+
+dicSetNewLocal : String -> OutVal -> Stack.Stack (Dict.Dict String OutVal) -> Stack.Stack (Dict.Dict String OutVal)
+dicSetNewLocal name value stackdic =
+     let
+        (dict1, stack_) =  Stack.pop stackdic  
+        dict2 = case dict1 of
+                   Just dict_ ->
+                            dict_
+                   _ ->
+                            Dict.empty
+        value2 = Dict.insert name value dict2
+     in
+      Stack.push value2 stack_
+
+dicPop : Stack.Stack (Dict.Dict String OutVal) ->Stack.Stack (Dict.Dict String OutVal)
+dicPop stackdic =
+      let
+       (a, newdic) = Stack.pop stackdic
+      in
+       newdic
+
+dicPush : Stack.Stack (Dict.Dict String OutVal) ->Stack.Stack (Dict.Dict String OutVal)
+dicPush stackdic =
+     let
+        dict_ = Dict.empty
+     in
+       Stack.push dict_ stackdic
+
+
+dicInit :  Stack.Stack (Dict.Dict String OutVal)
+dicInit  =
+     Stack.initialise
+
 --------------------------------------------------------- context
 {--
 type Context
@@ -96,29 +215,70 @@ getFunction name (Context { functions }) =
 type Context
     = Context
         --{ constants : Dict String OutVal
-        { constants : Stack (Dict String OutVal)
+        { constants : Stack.Stack (Dict.Dict String OutVal)
         , functions : Dict String (Context -> Input -> OutVal)
+        , log : String
+        , scope : Bool
         }
 
 empty : Context
 empty =
-    let
-      stack = Stack.initialise 
-      stack_ = Stack.push Dict.empty stack
-    in
+    --let
+    --  stack = Stack.initialise 
+    --  stack_ = Stack.push Dict.empty stack
+    --in
     Context
         --{ constants = Dict.empty
-        { constants = stack
+        { constants = dicInit
         , functions = Dict.empty
+        , log = ""
+        , scope = True
         }
-
+{--
 addConstant : String -> OutVal -> Context -> Context
 addConstant name value (Context context) =
     Context
         { context
-            | constants = context.constants |> Dict.insert name value
+            --| constants = context.constants |> Dict.insert name value
+            | constants = context.constants |> dicSetNewLocal name value
+            --| constants = context.constants |> dicSet name value
         }
 
+setConstant : String -> OutVal -> Context -> Context
+setConstant name value (Context context) =
+    Context
+        { context
+            --| constants = context.constants |> Dict.insert name value
+            --| constants = context.constants |> dicSetNewLocal name value
+            | constants = context.constants |> dicSet name value
+        }
+--}
+
+addConstant : String -> OutVal -> Context -> Context
+addConstant name value (Context context) =
+    let
+       r = dicSet name value context.constants
+       (new_constants, log_) = case r of
+                         Ok a ->
+                            let
+                              log = context.log ++ ">" ++ name ++ " "
+                            in
+                            (a,log)
+                         Err a ->
+                            let
+                              log = context.log ++ "*" ++ name ++ " "
+                            in
+                            (dicSetNewLocal name value context.constants, log)
+
+    in
+    Context
+        { context
+            --| constants = context.constants |> Dict.insert name value
+            --| constants = context.constants |> dicSetNewLocal name value
+            --| constants = context.constants |> dicSet name value
+            | constants = new_constants 
+            , log = log_
+        }
 
 addFunction : String -> (Context -> Input -> OutVal) -> Context -> Context
 addFunction name f (Context context) =
@@ -130,7 +290,15 @@ addFunction name f (Context context) =
 
 getConstant : String -> Context -> Maybe OutVal
 getConstant name (Context { constants }) =
-    Dict.get name constants
+    --Dict.get name constants
+    let 
+     r = dicGet name constants
+    in
+    case r of
+       Ok a ->
+            Just a
+       Err a ->
+            Just (OString a)
 
 
 getFunction : String -> Context -> Maybe (Context -> Input -> OutVal)

@@ -1,4 +1,4 @@
-module TestStack exposing (..)
+module TestStackOutVal exposing (..)
 
 import Array
 import Dict
@@ -51,8 +51,17 @@ dic = Stack.initialise
         |> Stack.push dicC
         |> Stack.push dicD
 --}
+
 ----------------------------------
-dicGetSerch : List (Dict.Dict String Int) -> String -> Result String Int
+type OutVal
+  = OFloat  Float
+  | OInt Int
+  | OString String
+  | OBool Bool
+  | OArray (Array.Array OutVal)
+  | ODict  (Dict.Dict String OutVal)  
+
+dicGetSerch : List (Dict.Dict String OutVal) -> String -> Result String OutVal
 dicGetSerch list name =
      let
         dict =  List.head list  |> Maybe.withDefault Dict.empty
@@ -73,7 +82,7 @@ dicGetSerch list name =
                  
 
 
-dicGet : String -> Stack.Stack (Dict.Dict String Int) -> Result String Int
+dicGet : String -> Stack.Stack (Dict.Dict String OutVal) -> Result String OutVal
 dicGet name  stackdic =
       let
        list = Stack.toList stackdic
@@ -83,7 +92,7 @@ dicGet name  stackdic =
 
 
 
-dicSetUpdate : String -> Int ->  Stack.Stack (Dict.Dict String Int) ->  Result String (Stack.Stack (Dict.Dict String Int))
+dicSetUpdate : String -> OutVal ->  Stack.Stack (Dict.Dict String OutVal) ->  Result String (Stack.Stack (Dict.Dict String OutVal))
 dicSetUpdate name value stackdic =
      let
         (dict, stack_) =  Stack.pop stackdic  
@@ -117,15 +126,15 @@ dicSetUpdate name value stackdic =
                     Err str ->
                           Err str
 
-dicSet : String -> Int -> Stack.Stack (Dict.Dict String Int) -> Result String (Stack.Stack (Dict.Dict String Int))
+dicSet : String -> OutVal -> Stack.Stack (Dict.Dict String OutVal) -> Result String (Stack.Stack (Dict.Dict String OutVal))
 dicSet name value stackdic =
       let
        result = dicSetUpdate name value stackdic 
       in
       result
 
-
-dicSetNewLocal : String -> Int -> Stack.Stack (Dict.Dict String Int) -> Result String (Stack.Stack (Dict.Dict String Int))
+{--
+dicSetNewLocal : String -> OutVal -> Stack.Stack (Dict.Dict String OutVal) -> Result String (Stack.Stack (Dict.Dict String OutVal))
 dicSetNewLocal name value stackdic =
      let
         (dict, stack_) =  Stack.pop stackdic  
@@ -137,15 +146,29 @@ dicSetNewLocal name value stackdic =
         value2 = Dict.insert name value dict2
      in
        Ok (Stack.push value2 stack_)
+--}
 
-dicPop : Stack.Stack (Dict.Dict String Int) ->Stack.Stack (Dict.Dict String Int)
+dicSetNewLocal : String -> OutVal -> Stack.Stack (Dict.Dict String OutVal) -> Stack.Stack (Dict.Dict String OutVal)
+dicSetNewLocal name value stackdic =
+     let
+        (dict, stack_) =  Stack.pop stackdic  
+        dict2 = case dict of
+                   Just dict_ ->
+                            dict_
+                   _ ->
+                            Dict.empty
+        value2 = Dict.insert name value dict2
+     in
+      Stack.push value2 stack_
+
+dicPop : Stack.Stack (Dict.Dict String OutVal) ->Stack.Stack (Dict.Dict String OutVal)
 dicPop stackdic =
       let
        (a, newdic) = Stack.pop stackdic
       in
        newdic
 
-dicPush : Stack.Stack (Dict.Dict String Int) ->Stack.Stack (Dict.Dict String Int)
+dicPush : Stack.Stack (Dict.Dict String OutVal) ->Stack.Stack (Dict.Dict String OutVal)
 dicPush stackdic =
      let
         dict = Dict.empty
@@ -154,20 +177,13 @@ dicPush stackdic =
 
 
 ----------------------------------------------------
-type OutVal
-  = OFloat  Float
-  | OInt Int
-  | OString String
-  | OBool Bool
-  | OArray (Array.Array OutVal)
-  | ODict  (Dict.Dict String OutVal)  
 
 dicInit :  Stack.Stack (Dict.Dict String OutVal)
 dicInit  =
      Stack.initialise
 
 ----------------------------------------------------
-
+{--
 dicA = Dict.empty
         |> Dict.insert "a" 1
 dicB = Dict.empty
@@ -194,10 +210,33 @@ rr7 = dicSet "a" 8  dic
 rr8 = dicSetNewLocal "a" 8  dic
 t1 = dicPop dic
 t2 = dicPush t1
+--}
 
 ------------------------------------
-{--
+
 d = dicInit
 
-d1 = dicSet "aaa" (OInt  9) d
---}
+d1 = dicSetNewLocal "aaa" (OInt  9) d
+
+d2 = dicPush d1
+err3 = dicSet "bbb" (OInt 1) d2
+ok3 = dicGet "aaa" d2
+d3 = dicSetNewLocal "aaa" (OInt  10) d2
+ok4 = dicGet "aaa" d3
+d4 = dicPop d3
+ok5 = dicGet "aaa" d4
+
+d5 = dicSet "ccc" (OInt 9) d4
+
+d6 = dicSetNewLocal "bbb" (OInt 9) d4
+
+d7 = dicPush d6
+r  = dicSet "bbb" (OInt 99) d7
+d9 = case r of
+   Ok a ->
+       a
+   Err a->
+       d7
+
+d10 = dicSet "aaa" (OInt 99) d9
+

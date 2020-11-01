@@ -11,6 +11,10 @@ import Set
 --import TestExprArrayDict exposing (..)
 import TestExprScorped exposing (..)
 
+{--
+ run : Parser a -> String -> Result (List DeadEnd) a
+
+--}
 
 
 ---------------------------------------------------------------------
@@ -24,11 +28,23 @@ type Statement
     | IfThenElsIfThen Expr (List Statement) (List (Expr,(List Statement)))
     | IfThenElsIfThenElse Expr (List Statement) (List (Expr,(List Statement))) (List Statement)
     | Case        Expr  (List (Expr,(List Statement)))
+    --| CaseDefault Expr  (List (Expr,(List Statement))) (List Statement)
     | While Expr (List Statement) 
+    --| For Statement Statement (List Statement) 
     | For Expr Expr (List Statement) 
     | Assign Expr Expr
+    --| Assign Statement Expr
     | Blank
 
+{--
+type Statement
+    = Var Name
+    | IfThenElse Statement (List Statement) (List Statement)
+    | While Statement (List Statement) 
+    | For Statement Statement (List Statement) 
+    | Assign Statement Statement
+    | Blank
+--}
 
 script : Parser (List Statement)
 script =
@@ -126,6 +142,7 @@ statement =
       , backtrackable ifStatement3  -- if then elsif else
       , backtrackable ifStatement4  -- if then elsif
       , backtrackable caseStatement -- case
+      --, ifStatement2  -- if then
       , whileStatement
       , forStatement
       ]
@@ -288,6 +305,18 @@ caseBlock  =
     |= lazy (\_ -> statements)
     |. spaces
 
+{--
+caseBlockDefault :  Parser (Expr,(List Statement))
+caseBlockDefault  =
+  succeed Tuple.pair
+    |. spaces
+    |= keyword "default"
+    |. spaces
+    |. symbol ":"
+    |. spaces
+    |= lazy (\_ -> statements)
+    |. spaces
+--}
 
 caseBlocks :  Parser (List (Expr,(List Statement)))
 caseBlocks  =
@@ -537,44 +566,6 @@ evalCaseSwitch   target exprStmts   context =
             in         
             context_2 
 
-scopePush : Context -> Context
-scopePush context =
-           let
-            context_record = case context of
-                        Context con -> 
-                                 con
-           in
-           if context_record.scope then
-                   let
-                     ct = dicPush context_record.constants
-                   in
-                   Context
-                     {
-                      context_record
-                       | constants  = ct
-                       }
-           else
-                   context
-
-scopePop : Context -> Context
-scopePop context =
-           let
-            context_record = case context of
-                        Context con -> 
-                                 con
-           in
-           if context_record.scope then
-                   let
-                     ct = dicPop context_record.constants
-                   in
-                   Context
-                     {
-                      context_record
-                       | constants  = ct
-                       }
-           else
-                   context
-
 evalStep : (Array.Array Statement) -> Int -> Context -> Context
 evalStep arr pos context =
     let
@@ -606,7 +597,7 @@ evalStep arr pos context =
                                "false"
                      ODict _ ->
                                "false"
-{--
+
                context_2 = case a_ of
                      OBool True ->  -- then
                               evalStep (Array.fromList b) 0 context
@@ -620,31 +611,9 @@ evalStep arr pos context =
                               context
                      ODict _ ->
                               context
-
-
             in         
+            --addConstant name a_ context_2 
             context_2 
---}
-               context_1 = scopePush context
-               context_2 = case a_ of
-                     OBool True ->  -- then
-                              evalStep (Array.fromList b) 0 context_1
-                     OBool False -> -- else
-                              evalStep (Array.fromList c) 0 context_1
-                     OString s ->
-                              context_1
-                     OFloat f ->
-                              context_1
-                     OArray _ ->
-                              context_1
-                     ODict _ ->
-                              context_1
-
-
-               context_3 = scopePop context_2
-            in         
-            context_3 
-
 
         Just (IfThen a b ) ->
             let
@@ -663,23 +632,22 @@ evalStep arr pos context =
                      ODict _ ->
                                "false"
 
-               context_1 = scopePush context
                context_2 = case a_ of
                      OBool True ->  -- then
-                              evalStep (Array.fromList b) 0 context_1
+                              evalStep (Array.fromList b) 0 context
                      OBool False -> -- else
-                              context_1
+                              context
                      OString s ->
-                              context_1
+                              context
                      OFloat f ->
-                              context_1
+                              context
                      OArray _ ->
-                              context_1
+                              context
                      ODict _ ->
-                              context_1
-               context_3 = scopePop context_2
+                              context
             in         
-            context_3 
+            --addConstant name a_ context_2 
+            context_2 
 
         Just (IfThenElsIfThenElse a b c d) ->
             let
@@ -698,23 +666,22 @@ evalStep arr pos context =
                      ODict _ ->
                                "false"
 
-               context_1 = scopePush context
                context_2 = case a_ of
                      OBool True ->  -- then
-                              evalStep (Array.fromList b) 0 context_1
+                              evalStep (Array.fromList b) 0 context
                      OBool False -> -- else
-                              evalElsIfs c d context_1
+                              evalElsIfs c d context
                      OString s ->
-                              context_1
+                              context
                      OFloat f ->
-                              context_1
+                              context
                      OArray _ ->
-                              context_1
+                              context
                      ODict _ ->
-                              context_1
-               context_3 = scopePop context_2
+                              context
             in         
-            context_3 
+            --addConstant name a_ context_2 
+            context_2 
 
         Just (IfThenElsIfThen a b c ) ->
             let
@@ -733,23 +700,22 @@ evalStep arr pos context =
                      ODict _ ->
                                "false"
 
-               context_1 = scopePush context
                context_2 = case a_ of
                      OBool True ->  -- then
-                              evalStep (Array.fromList b) 0 context_1
+                              evalStep (Array.fromList b) 0 context
                      OBool False -> -- else
-                              evalElsIfs2 c  context_1
+                              evalElsIfs2 c  context
                      OString s ->
-                              context_1
+                              context
                      OFloat f ->
-                              context_1
+                              context
                      OArray _ ->
-                              context_1
+                              context
                      ODict _ ->
-                              context_1
-               context_3 = scopePop context_2
+                              context
             in         
-            context_3 
+            --addConstant name a_ context_2 
+            context_2 
 
         Just (Case a b  ) ->
             let
@@ -768,29 +734,34 @@ evalStep arr pos context =
                      ODict _ ->
                                "false"
 
-               context_1 = scopePush context
-               context_2 = evalCaseSwitch a_ b  context_1
-               context_3 = scopePop context_2
+               context_2 = evalCaseSwitch a_ b  context
 
+               {--
+               context_2 = case a_ of
+                     OBool True ->  -- then
+                              evalStep (Array.fromList b) 0 context
+                     OBool False -> -- else
+                              --evalElsIfs2 c  context
+                              evalCaseSwitch c  context
+                     OString s ->
+                              context
+                     OFloat f ->
+                              context
+                     OArray _ ->
+                              context
+                     ODict _ ->
+                              context
+               --}
             in         
-            context_3 
+            --addConstant name a_ context_2 
+            context_2 
 
         Just (While a b ) ->
-            let
-               context_1 = scopePush context
-               context_2 = evalWhile a (Array.fromList b) context_1
-               context_3 = scopePop context_2
-            in         
-            context_3 
+            evalWhile a (Array.fromList b) context
 
 
         Just (For a b c) ->
-            let
-               context_1 = scopePush context
-               context_2 = evalFor a b (Array.fromList c) context_1
-               context_3 = scopePop context_2
-            in         
-            context_3 
+            evalFor a b (Array.fromList c) context
 
         _ ->
             context
@@ -849,8 +820,6 @@ exec2 script_name =
           Ok  stmts ->
               let
                  context = empty
-                             |> addFunction "strjoin" strjoin 
-
                  ans = eval2 context stmts
 
                  ans2 = case ans of
@@ -858,26 +827,15 @@ exec2 script_name =
                                      a
 
                  ans3 =  ans2.constants 
-                 log =  ans2.log
-                 --ans4 = Debug.toString  (Dict.toList ans3)
-                 --           |> String.replace "\"" ""
-                 --           |> String.replace "OFloat" ""
-                 --           |> String.replace "[" ""
-                 --           |> String.replace "]" ""
-                 --           |> String.replace "),(" ") ("
-                 
-                 ans4 = Debug.toString  (ans3)
+                 ans4 = Debug.toString  (Dict.toList ans3)
                             |> String.replace "\"" ""
                             |> String.replace "OFloat" ""
                             |> String.replace "[" ""
                             |> String.replace "]" ""
-                            |> String.replace "," " ="
-                            |> String.replace ") =(" " , "
-                            --|> String.replace "(" ""
-                            --|> String.replace ")" ""
-                            --|> String.replace "Stack Dict.fromList " ""
+                            |> String.replace "),(" ") ("
+                 
               in
-              ans4 ++ " -> " ++ log
+              ans4
   in
   result
 
@@ -1101,23 +1059,8 @@ input4 = """
 */
 
 """
-script1 = """
-  a = 1;
-  b = 0;
-
-  if a > 1 then
-     b = 1;
-  else
-     b = 2;
-     c = 1;
-  end
-   a = 100;
-
-  c = strjoin("ABC", "abc");
-
-"""
-help = """
+{--
 parse input3
 exec1 input3
 exed2 input3
-"""
+--}
