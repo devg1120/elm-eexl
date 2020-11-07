@@ -44,6 +44,7 @@ type Statement
     | DefVar Expr Expr
     | DefFunc Expr (List Expr) (List Statement)
     | Assign Expr Expr
+    | Return Expr 
     | Blank
 
 
@@ -118,7 +119,7 @@ typeName =
         |= variable
            { start = Char.isLower
            , inner = \c -> Char.isAlphaNum c || c == '_'
-           , reserved = Set.fromList [ "if", "then", "else","elsif", "end", "while", "do","in", "for", "case", "default" ,"var" ,"def" ]
+           , reserved = Set.fromList [ "if", "then", "else","elsif", "end", "while", "do","in", "for", "case", "default" ,"var" ,"def" , "return"]
            }
 
 
@@ -130,7 +131,7 @@ typeVar =
           { start = Char.isLower
           , inner = \c -> Char.isAlphaNum c || c == '_'
           --, reserved = Set.fromList [ "let", "in", "case", "default", "of" ]
-          , reserved = Set.fromList [ "if", "then", "else","elsif","end", "while", "do","in", "for" , "case", "default" , "var", "def"]
+          , reserved = Set.fromList [ "if", "then", "else","elsif","end", "while", "do","in", "for" , "case", "default" , "var", "def", "return"]
           }
 
 
@@ -147,6 +148,7 @@ statement =
       , backtrackable caseStatement -- case
       , whileStatement
       , forStatement
+      , returnStatement
       ]
 
 
@@ -175,6 +177,16 @@ assignStatement =
     |. symbol "="
     |. spaces
     --|= typeVar
+    |= expression
+    |. spaces
+    |. symbol ";"
+
+returnStatement : Parser Statement 
+returnStatement =
+  succeed Return
+    |. spaces
+    |. keyword "return"
+    |. spaces
     |= expression
     |. spaces
     |. symbol ";"
@@ -406,9 +418,105 @@ forStatement =
     |. spaces
 
 ------------------------------------------------------------------
+
+userFuncExec2_ : (List Expr) -> (List Statement) -> UserEnv -> (Array.Array ArgValue) -> OutVal
+userFuncExec2_ args stmts userenv input_args =
+            --OString "OK"
+            let
+              r = case (Array.get 0 input_args) of
+                       Just (AvInt a)  -> 
+                                   a
+                       _ ->
+                             0
+            in
+            --OString ( Debug.toString r)
+            --OString ( Debug.toString input_args)
+              --  AvInt 1 AvInt 2 AvInt 3
+            OString ( Debug.toString args)
+              -- Variavle a Variable b Variable c
+
+userFuncExec2 : (List Expr) -> (List Statement) -> UserEnv -> (Array.Array ArgValue) -> OutVal
+userFuncExec2 args stmts userenv input_args =
+            --OString "OK"
+            let
+              func index v =
+                  let
+                   name = case v of
+                       Variable n -> 
+                             n
+                       _ ->
+                             "__"
+
+                   value  = case (Array.get index input_args) of
+                       Just (AvInt a)  -> 
+                                   OFloat (toFloat a)
+                       Just (AvBool a)  -> 
+                                   OBool a
+                       Just (AvFloat a)  -> 
+                                   OFloat a
+                       Just (AvString a)  -> 
+                                   OString a
+                       _ ->
+                             OFloat 0
+                  in
+                  (name, value)
+
+              new_args = List.indexedMap func args
+              context = empty
+
+              func2 (name, v) context_ =
+                        addConstant name v context_
+
+
+              context1 = List.foldl  func2 context new_args
+
+
+              (userenv_2,ans) = eval2 userenv context1 stmts
+
+              ret = getConstant "_return_" ans
+
+{--
+              ans2 = case ans of
+                            Context a -> 
+                                     a
+--}
+            in
+            --OString ( Debug.toString r)
+            --OString ( Debug.toString input_args)
+              --  AvInt 1 AvInt 2 AvInt 3
+            --OString ( Debug.toString args)
+              -- Variavle a Variable b Variable c
+            --OString ( Debug.toString new_args)
+            --OString ( Debug.toString context1)
+            --OString ( Debug.toString ans)
+            case ret of
+                Just r ->
+                         r
+                _ ->
+                         OString ""
+
+userFuncExec : UserEnv -> Context -> String -> (Array.Array ArgValue) -> OutVal
+userFuncExec userenv context funcname input_args =
+         --OString ("NOT FOUND:::" ++ funcname)
+         let 
+          result = userDefFuncGet funcname userenv context
+         in
+         case result of
+               Ok (args, stmts) ->
+                    let
+                       r = userFuncExec2 args stmts userenv input_args
+                    in
+                    --OString ("*FOUND::" ++ funcname)
+                    r
+               Err a ->
+                    OString ("NOT FOUND:::" ++ funcname)
+
+    
+
+
 --exec_evaluate :  Context -> Expr -> OutVal
-exec_evaluate :  Context -> Expr ->  OutVal
-exec_evaluate  context expr =       
+exec_evaluate :  UserEnv -> Context -> Expr ->  OutVal
+exec_evaluate  (UserEnv userenv) context expr =       
      let
        r = evaluate  context expr
      in
@@ -416,8 +524,9 @@ exec_evaluate  context expr =
          ExprOk a ->
                 a
 
-         ExprNotFoundFunc a ->
-                OString a
+         ExprNotFoundFunc (name, args) ->
+                --OString ("NOT FOUND::" ++ a)
+                userFuncExec (UserEnv userenv) context name args
 
          ExprErr a ->
                 OString a
@@ -426,7 +535,7 @@ exec_evaluate  context expr =
 evalWhile : Expr -> (Array.Array Statement)  -> UserEnv -> Context -> (UserEnv,Context)
 evalWhile expr arr  userenv context =
      let
-        expr_ = exec_evaluate context expr
+        expr_ = exec_evaluate userenv context expr
      in
      case expr_ of
             OBool True ->  
@@ -471,7 +580,7 @@ evalFor val array stmt  userenv context =
                   _ ->
                           "not"
 
-        array_ = exec_evaluate context array
+        array_ = exec_evaluate userenv context array
      in
      case array_ of
             OArray a_ ->  
@@ -488,7 +597,7 @@ evalElsIfs   exprStmts  elseStmts  userenv context =
                                               a
                                      _ ->
                                               (Bool False, [])
-             a_ = exec_evaluate context expr
+             a_ = exec_evaluate userenv context expr
              name = case a_ of
                      OBool True ->  -- then
                                "true"
@@ -537,7 +646,7 @@ evalElsIfs2   exprStmts  userenv  context =
                                               a
                                      _ ->
                                               (Bool False, [])
-             a_ = exec_evaluate context expr
+             a_ = exec_evaluate userenv context expr
              name = case a_ of
                      OBool True ->  -- then
                                "true"
@@ -585,7 +694,7 @@ evalCaseSwitch   target exprStmts  userenv context =
                                               a
                                      _ ->
                                               (Bool False, [])
-             a_ = exec_evaluate context expr
+             a_ = exec_evaluate userenv context expr
              --cond = target == a_
 
              cond = case expr of 
@@ -665,6 +774,22 @@ userDefFuncAdd name argvs stmts (UserEnv userenv ) (Context context) =
          }
        )
       
+userDefFuncGet : String -> UserEnv -> Context 
+     -> Result String  (List Expr , List Statement)
+userDefFuncGet name  (UserEnv userenv ) (Context context) =
+      let
+          log_ = context.log ++ "[f]" ++ name ++ " "
+          -- userFunctions_= Dict.insert name (argvs, stmts)  userenv.userFunctions
+          --(argvs, stms) = userFunctions_= Dict.get name   userenv.userFunctions
+          result =  Dict.get name   userenv.userFunctions
+
+      in
+      case result of
+          Just a ->
+                Ok a
+          _ ->
+                Err ("..NOT FOUND:" ++ name)
+
 
 evalStep : (Array.Array Statement) -> Int -> UserEnv -> Context -> (UserEnv, Context)
 evalStep arr pos userenv context =
@@ -673,7 +798,7 @@ evalStep arr pos userenv context =
       userenv_context_pair = case (Array.get pos arr) of
         Just (DefVar a b) ->
             let
-               b_ = exec_evaluate context b
+               b_ = exec_evaluate userenv context b
                name = case a of
                      Variable n ->
                                n
@@ -696,7 +821,7 @@ evalStep arr pos userenv context =
 
         Just (Assign a b) ->
             let
-               b_ = exec_evaluate context b
+               b_ = exec_evaluate userenv context b
                name = case a of
                      Variable n ->
                                n
@@ -705,9 +830,15 @@ evalStep arr pos userenv context =
             in         
             (userenv, (setConstant name b_  context)  )
 
+        Just (Return a ) ->
+            let
+               a_ = exec_evaluate userenv context a
+            in         
+            (userenv, (addConstant "_return_" a_  context)  )
+
         Just (IfThenElse a b c) ->
             let
-               a_ = exec_evaluate context a
+               a_ = exec_evaluate userenv context a
                name = case a_ of
                      OBool True ->  -- then
                                "true"
@@ -744,7 +875,7 @@ evalStep arr pos userenv context =
 
         Just (IfThen a b ) ->
             let
-               a_ = exec_evaluate context a
+               a_ = exec_evaluate userenv context a
                name = case a_ of
                      OBool True ->  -- then
                                "true"
@@ -779,7 +910,7 @@ evalStep arr pos userenv context =
 
         Just (IfThenElsIfThenElse a b c d) ->
             let
-               a_ = exec_evaluate context a
+               a_ = exec_evaluate userenv context a
                name = case a_ of
                      OBool True ->  -- then
                                "true"
@@ -814,7 +945,7 @@ evalStep arr pos userenv context =
 
         Just (IfThenElsIfThen a b c ) ->
             let
-               a_ = exec_evaluate context a
+               a_ = exec_evaluate userenv context a
                name = case a_ of
                      OBool True ->  -- then
                                "true"
@@ -849,7 +980,7 @@ evalStep arr pos userenv context =
 
         Just (Case a b  ) ->
             let
-               a_ = exec_evaluate context a
+               a_ = exec_evaluate userenv context a
                name = case a_ of
                      OBool True ->  -- then
                                "true"
@@ -1244,6 +1375,8 @@ script3 = """
   def test ( a, b, c) do
      a = a + b + c;
 
+     return a;
+
   end
 
 
@@ -1255,10 +1388,11 @@ script3 = """
   end
    a = 100;
 
-  c = strjoin("ABC", "abc");
+  c = strjoin("ABC", "abc"); //lib
 
-  var d = test(1,2,3);
+  var d = test(1,2,3);       //user func
 
+  return a;
 
 """
 help = """

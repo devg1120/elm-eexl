@@ -285,14 +285,14 @@ getFunction name (Context { functions }) =
 
 
 --------------------------------------------------------- evalate
-type ExprResult error value
+type ExprResult error value notfound
     = ExprOk value
-    | ExprNotFoundFunc error
+    | ExprNotFoundFunc notfound
     | ExprErr error
 
 --evaluate : Expr -> OutVal
 --evaluate :  Context -> Expr -> OutVal
-evaluate :  Context -> Expr -> ExprResult String OutVal
+evaluate :  Context -> Expr -> ExprResult String OutVal (String, (Array.Array ArgValue))
 evaluate  context expr =
   case expr of
     Variable name ->
@@ -327,7 +327,8 @@ evaluate  context expr =
                      Just f ->
                             ExprOk (f context args)
                      _ ->
-                            ExprNotFoundFunc  ("**not_found function:" ++ name)
+                            --ExprNotFoundFunc  ("**not_found function:" ++ name)
+                            ExprNotFoundFunc  (name,args)
 
 {--
     Function name args ->
@@ -733,7 +734,7 @@ typevarHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def", "return"]
     }
 
 default : Parser Expr
@@ -997,7 +998,7 @@ varValueHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def", "return"]
     }
 ---------------------------------------------
 {--
@@ -1072,7 +1073,7 @@ formalVarValueHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def", "return"]
     }
 
 formalArgValues :  Parser (List Expr)
@@ -1111,7 +1112,7 @@ formalVarValueHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def", "return"]
     }
 
 formalArgValues :  Parser (List ArgValue)
@@ -1201,7 +1202,7 @@ array_index  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var" , "def"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var" , "def", "return"]
                 }
              
         |. symbol "["
@@ -1228,7 +1229,7 @@ dict_lookup  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def", "return"]
                 }
              
         |. symbol "."
@@ -1237,7 +1238,7 @@ dict_lookup  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def", "return"]
                 }
              
         |> andThen
@@ -1261,7 +1262,7 @@ dict_index  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def", "return"]
                 }
              
         |. symbol "{"
