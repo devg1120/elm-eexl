@@ -435,8 +435,8 @@ userFuncExec2_ args stmts userenv input_args =
             OString ( Debug.toString args)
               -- Variavle a Variable b Variable c
 
-userFuncExec2 : (List Expr) -> (List Statement) -> UserEnv -> (Array.Array ArgValue) -> OutVal
-userFuncExec2 args stmts userenv input_args =
+userFuncExec2 : Context -> (List Expr) -> (List Statement) -> UserEnv -> (Array.Array ArgValue) -> OutVal
+userFuncExec2 (Context base_context) args stmts userenv input_args =
             --OString "OK"
             let
               func index v =
@@ -468,10 +468,15 @@ userFuncExec2 args stmts userenv input_args =
                         addConstant name v context_
 
 
-              context1 = List.foldl  func2 context new_args
+              (Context context1) = List.foldl  func2 context new_args
+              context2 =
+                       Context
+                          { context1
+                              | functions = base_context.functions
+                          }                          
 
 
-              (userenv_2,ans) = eval2 userenv context1 stmts
+              (userenv_2,ans) = eval2 userenv context2 stmts
 
               ret = getConstant "_return_" ans
 
@@ -504,7 +509,7 @@ userFuncExec userenv context funcname input_args =
          case result of
                Ok (args, stmts) ->
                     let
-                       r = userFuncExec2 args stmts userenv input_args
+                       r = userFuncExec2 context args stmts userenv input_args
                     in
                     --OString ("*FOUND::" ++ funcname)
                     r
