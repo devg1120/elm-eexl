@@ -492,8 +492,9 @@ userFuncExec2 (Context base_context) args stmts userenv input_args =
             --OString ( Debug.toString args)
               -- Variavle a Variable b Variable c
             --OString ( Debug.toString new_args)
-            --OString ( Debug.toString context1)
+            --OString ( Debug.toString context2)
             --OString ( Debug.toString ans)
+
             case ret of
                 Just r ->
                          r
@@ -1384,6 +1385,10 @@ script3 = """
 
   end
 
+  def str ( l, r ) do
+     return strjoin(l, r) ;
+     //return l + r;
+  end
 
   if a > 1 then
      b = 1;
@@ -1395,7 +1400,14 @@ script3 = """
 
   c = strjoin("ABC", "abc"); //lib
 
+  var e1 = "abc";
+  var e2 = "ABC";
+
+  var e = strjoin(e1, e2); //lib
+
   var d = test(1,2,3);       //user func
+
+  var ss = str("xyz", "1XYZ");
 
   return a;
 
