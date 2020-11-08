@@ -388,6 +388,7 @@ defFuncStatement =
     |. spaces
     --|= lazy (\_ -> typeVar)
     |= lazy (\_ -> expression)
+    |. spaces
     |. symbol "("
     |. spaces
     |= formalArgValues
@@ -1568,6 +1569,102 @@ script6 = """
    end
 
 """
+script7 = """
+  var a = 1;
+  var b = 0;
+  var c = 0;
+
+
+  def test ( a, b, c) do
+     a = a + b + c;
+
+     if a > 1 then
+        a = 0;
+     end
+
+     return a;
+
+  end
+
+  def test2 (a) do
+
+     if a > 1 then
+        a = 100;
+     end
+
+     return a;
+
+  end
+
+  def str ( l, r ) do
+     return strjoin(l, r) ;
+  end
+
+  if a > 1 then
+     b = 1;
+  else
+     var b = 2;
+     c = 1;
+  end
+   a = 100;
+
+  c = strjoin("ABC", "abc"); //lib
+
+  var e1 = "abc";
+  var e2 = "ABC";
+
+  var e = strjoin(e1, e2); //lib
+
+  var d = test(1,2,3);       //user func
+  var d2 = test2(2);       //user func
+
+  var ss = str("xyz", "1XYZ");
+
+  return a;
+
+"""
+
+fib = """
+var target = 30;
+
+def fib (n) do
+    var a = 0;
+    if n < 2 then
+        a =  n;
+    --else 
+    --    a = fib(n-1) + fib(n-2);
+    end
+
+    return a;
+
+end
+
+
+
+var result = fib(target);
+
+
+"""
+
+{--
+
+https://github.com/jonathandturner/rhai/blob/master/scripts/fibonacci.rhai#L16
+
+const target = 30;
+
+fn fib(n) {
+    if n < 2 {
+         n
+    } else {
+        fib(n-1) + fib(n-2)
+    }
+}
+
+
+let result = fib(target);
+
+
+--}
 
 help = """
 parse input3
