@@ -563,14 +563,27 @@ exec_evaluate  (UserEnv userenv) context expr =
 evalWhile : Expr -> (Array.Array Statement)  -> UserEnv -> Context -> (UserEnv,Context)
 evalWhile expr arr  userenv context =
      let
-        expr_ = exec_evaluate userenv context expr
+        expr_  = exec_evaluate userenv context expr
      in
      case expr_ of
+            --OBool True ->  
+            --     let
+            --       (userenv_3,context_3) = evalStep  arr 0 userenv context
+            --     in
+            --     evalWhile expr arr  userenv_3 context_3
+
             OBool True ->  
                  let
                    (userenv_3,context_3) = evalStep  arr 0 userenv context
                  in
-                 evalWhile expr arr  userenv_3 context_3
+                 if isBreak context_3 then
+                   --(userenv_3, context_3)
+                   let
+                     context_4 = setBreak False context_3
+                   in
+                   (userenv_3, context_4)
+                 else
+                   evalWhile expr arr  userenv_3 context_3
 
             OBool False -> 
                  (userenv, context)
@@ -592,8 +605,18 @@ evalForHelp name array stmt userenv context =
           array2 = Array.slice 1 (Array.length array) array
         in
         if (Array.length array2) > 0 then
-           --evalForHelp name array2 stmt userenv context_3
-           evalForHelp name array2 stmt (Tuple.first userenv_context_3) (Tuple.second userenv_context_3)
+           --evalForHelp name array2 stmt (Tuple.first userenv_context_3) (Tuple.second userenv_context_3)
+           let
+            context_3 = Tuple.second userenv_context_3
+            userenv_3 = Tuple.first  userenv_context_3
+           in
+           if isBreak context_3 then
+             let
+               context_4 = setBreak False context_3
+             in
+             (userenv_3, context_4)
+           else
+             evalForHelp name array2 stmt (Tuple.first userenv_context_3) (Tuple.second userenv_context_3)
         else
            userenv_context_3
 
@@ -746,6 +769,15 @@ evalCaseSwitch   target exprStmts  userenv context =
             in         
             userenv_context_2 
 
+isBreak : Context -> Bool
+isBreak context =
+           let
+            context_record = case context of
+                        Context con -> 
+                                 con
+           in
+           context_record.break
+
 setBreak : Bool -> Context -> Context
 setBreak bool context =
            let
@@ -758,6 +790,15 @@ setBreak bool context =
                  context_record
                       | break  = bool
                  }
+
+isContinue : Context -> Bool
+isContinue context =
+           let
+            context_record = case context of
+                        Context con -> 
+                                 con
+           in
+           context_record.continue
 
 setContinue bool context =
            let
@@ -1088,12 +1129,20 @@ evalStep arr pos userenv context =
             (userenv,context)
     in
     if Array.length arr <= pos then
-       --(userenv, context_)
        userenv_context_pair
 
     else
-       --(userenv, evalStep arr (pos + 1) userenv, context_)
-       evalStep arr (pos + 1) (Tuple.first userenv_context_pair) (Tuple.second userenv_context_pair)
+       --evalStep arr (pos + 1) (Tuple.first userenv_context_pair) (Tuple.second userenv_context_pair)
+       let
+         context__ = Tuple.second userenv_context_pair
+       in
+       if isBreak context__ then
+          userenv_context_pair
+       else
+          if isContinue context__ then
+             userenv_context_pair
+          else
+             evalStep arr (pos + 1) (Tuple.first userenv_context_pair) (Tuple.second userenv_context_pair)
 
 ----------------------------------------------------------
 parse script_name =
@@ -1490,6 +1539,11 @@ script5 = """
 
    while total < 45 do
 
+    //total = total + 1;
+
+    if total > 10 then
+        break;
+    end
     total = total + 1;
 
    end
@@ -1497,6 +1551,21 @@ script5 = """
    //break;
 
    //continue;
+
+"""
+script6 = """
+   var total = 0;
+
+   var ok = 0;
+
+   for ok in [1,2,3,4,5,6,7,8,9] do
+
+    total = total + ok;
+    if total > 10 then
+        break;
+    end
+
+   end
 
 """
 
