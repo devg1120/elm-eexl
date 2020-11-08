@@ -1,5 +1,6 @@
 --module TestExprScorpedDefVar exposing (..)
-module TestExprScorpedDefVarFunc exposing (..)
+--module TestExprScorpedDefVarFunc exposing (..)
+module TestExprScorpedDefVarFuncBreak exposing (..)
 
 import Parser exposing (..)
 import Dict exposing (Dict)
@@ -177,7 +178,8 @@ type Context
         --{ constants : Dict String OutVal
         { constants : Stack.Stack (Dict.Dict String OutVal)
         , functions : Dict String (Context -> Input -> OutVal)
-        --, userfunctions : Dict String (Context ->  (List Expr) -> (List x)  -> OutVal)
+        , break : Bool
+        , continue : Bool
         , log : String
         , scope : Bool
         , defvar : Bool
@@ -193,6 +195,8 @@ empty =
         --{ constants = Dict.empty
         { constants = dicInit
         , functions = Dict.empty
+        , break = False
+        , continue = False
         , log = ""
         , scope = True
         , defvar = True

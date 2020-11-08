@@ -1,4 +1,5 @@
-module TestExecScorpedDefVarFunc exposing (..)
+--module TestExecScorpedDefVarFunc exposing (..)
+module TestExecScorpedDefVarFuncBreak exposing (..)
 
 
 import Parser exposing (..)
@@ -10,7 +11,8 @@ import Set
 --import TestExpr exposing (..)
 --import TestExprArrayDict exposing (..)
 --import TestExprScorpedDefVar exposing (..)
-import TestExprScorpedDefVarFunc exposing(..)
+--import TestExprScorpedDefVarFunc exposing(..)
+import TestExprScorpedDefVarFuncBreak exposing(..)
 
 
 
@@ -151,6 +153,8 @@ statement =
       , whileStatement
       , forStatement
       , returnStatement
+      , breakStatement
+      , continueStatement
       ]
 
 
@@ -742,6 +746,31 @@ evalCaseSwitch   target exprStmts  userenv context =
             in         
             userenv_context_2 
 
+setBreak : Bool -> Context -> Context
+setBreak bool context =
+           let
+            context_record = case context of
+                        Context con -> 
+                                 con
+           in
+            Context
+                 {
+                 context_record
+                      | break  = bool
+                 }
+
+setContinue bool context =
+           let
+            context_record = case context of
+                        Context con -> 
+                                 con
+           in
+            Context
+                 {
+                 context_record
+                      | continue  = bool
+                 }
+
 scopePush : Context -> Context
 scopePush context =
            let
@@ -859,6 +888,18 @@ evalStep arr pos userenv context =
                a_ = exec_evaluate userenv context a
             in         
             (userenv, (addConstant "_return_" a_  context)  )
+
+        Just (Break  ) ->
+            let
+               context_ = setBreak True context 
+            in         
+            (userenv,  context_ )
+
+        Just (Continue  ) ->
+            let
+               context_ = setContinue True context 
+            in         
+            (userenv,  context_ )
 
         Just (IfThenElse a b c) ->
             let
@@ -1124,7 +1165,8 @@ exec2 script_name =
                  --           |> String.replace "]" ""
                  --           |> String.replace "),(" ") ("
                  
-                 ans4 = Debug.toString  (ans3)
+                 --ans4 = Debug.toString  (ans3)
+                 ans4 = Debug.toString  (ans2)
                             |> String.replace "\"" ""
                             |> String.replace "OFloat" ""
                             |> String.replace "[" ""
@@ -1451,6 +1493,10 @@ script5 = """
     total = total + 1;
 
    end
+
+   //break;
+
+   //continue;
 
 """
 

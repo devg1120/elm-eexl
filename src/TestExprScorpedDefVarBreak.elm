@@ -1,5 +1,5 @@
 --module TestExprScorpedDefVar exposing (..)
-module TestExprScorpedDefVarFunc exposing (..)
+module TestExprScorpedDefVar exposing (..)
 
 import Parser exposing (..)
 import Dict exposing (Dict)
@@ -177,7 +177,6 @@ type Context
         --{ constants : Dict String OutVal
         { constants : Stack.Stack (Dict.Dict String OutVal)
         , functions : Dict String (Context -> Input -> OutVal)
-        --, userfunctions : Dict String (Context ->  (List Expr) -> (List x)  -> OutVal)
         , log : String
         , scope : Bool
         , defvar : Bool
@@ -285,15 +284,11 @@ getFunction name (Context { functions }) =
 
 
 --------------------------------------------------------- evalate
-type ExprResult error value notfound
-    = ExprOk value
-    | ExprNotFoundFunc notfound
-    | ExprErr error
 
 --evaluate : Expr -> OutVal
---evaluate :  Context -> Expr -> OutVal
-evaluate :  Context -> Expr -> ExprResult String OutVal (String, (Array.Array ArgValue))
-evaluate  context expr =
+--evaluate  expr =
+evaluate : Context -> Expr -> OutVal
+evaluate context expr =
   case expr of
     Variable name ->
        let
@@ -305,9 +300,8 @@ evaluate  context expr =
                       _ ->
                              (OString ("not_found constant:" ++ name))
        in
-       ExprOk result
+       result
      
-{--
     Function name args ->
          let
            func_ = getFunction name context
@@ -318,35 +312,7 @@ evaluate  context expr =
                             (OString ("not_found function:" ++ name))
          in
          ans
---}
-    Function name args ->
-         let
-           func_ = getFunction name context
-         in
-           case func_ of
-                     Just f ->
-                            ExprOk (f context args)
-                     _ ->
-                            --ExprNotFoundFunc  ("**not_found function:" ++ name)
-                            ExprNotFoundFunc  (name,args)
 
-{--
-    Function name args ->
-         let
-           result = userFunction name args context
-           ans = case result of
-                     Ok a ->
-                            a
-                     Err a ->
-                            func_ = getFunction name context
-                            ans = case func_ of
-                                      Just f ->
-                                             (f context args)
-                                      _ ->
-                                             (OString ("not_found function:" ++ name))
-         in
-         ans
---}
     ArrayIndex name index ->
          let
            array_ = getConstant name context
@@ -367,7 +333,7 @@ evaluate  context expr =
                      _ ->
                            (OString " !!not_found ArrayIndex")
          in
-         ExprOk ans
+         ans
          --(OString " !!array_index")
 
     DictLookUp name key ->
@@ -390,7 +356,7 @@ evaluate  context expr =
                      _ ->
                            (OString " !!not_found dict lookup")
          in
-         ExprOk ans
+         ans
          --(OString " !!array_index")
 
     DictIndex name key ->
@@ -413,19 +379,19 @@ evaluate  context expr =
                      _ ->
                            (OString " !!not_found dictIndex")
          in
-         ExprOk ans
+         ans
          --(OString " !!array_index")
     String s ->
-     ExprOk (OString  s)
+     OString  s
 
     Integer n ->
-     ExprOk (OFloat (toFloat n))
+     OFloat (toFloat n)
 
     Floating n ->
-     ExprOk (OFloat  n)
+     OFloat  n
 
     Bool n ->
-     ExprOk (OBool  n)
+     OBool  n
 
     Array an ->
      let
@@ -443,7 +409,7 @@ evaluate  context expr =
                   OString n
         arr2 = Array.map conv an
      in
-     ExprOk (OArray arr2)
+     OArray arr2
 
     Dict dt ->
      let
@@ -461,7 +427,7 @@ evaluate  context expr =
                   OString n
         dt2 = Dict.map conv dt
      in
-     ExprOk (ODict dt2)
+     ODict dt2
 
     Add a b ->
     {--
@@ -480,65 +446,65 @@ evaluate  context expr =
        b_ = evaluate context b
      in
      case (a_, b_) of
-        (ExprOk (OFloat aa),  ExprOk (OFloat bb)) ->
-                ExprOk (OFloat  ( aa + bb ))
+        (OFloat aa,  OFloat bb) ->
+                OFloat  ( aa + bb )
 
-        (ExprOk (OString aa), ExprOk (OString bb)) ->
-                ExprOk (OString ( aa ++ bb ))
+        (OString aa, OString bb) ->
+                OString ( aa ++ bb )
         _ ->
-                ExprOk (OFloat 0)
+                OFloat 0
 
     Sub a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OFloat ( a_ -  b_))
+     OFloat ( a_ -  b_)
 
     Mul a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OFloat ( a_ *  b_))
+     OFloat ( a_ *  b_)
 
     Div a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OFloat ( a_ / b_))
+     OFloat ( a_ / b_)
 
     Div2 a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OFloat ((toFloat ((floor a_) // (floor  b_)))))
+     OFloat ((toFloat ((floor a_) // (floor  b_))))
 
     Div3 a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
       let
@@ -549,99 +515,99 @@ evaluate  context expr =
         ans_ = a2 - (div_ * b2)
 
       in
-      ExprOk (OFloat (toFloat ans_))
+      OFloat (toFloat ans_)
 
     And a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OBool n) -> n
+               OBool n -> n
                _ -> False
        b_ = case (evaluate context b) of
-               ExprOk (OBool n) -> n
+               OBool n -> n
                _ -> False
      in
-     ExprOk (OBool ( a_ && b_))
+     OBool ( a_ && b_)
 
     Or a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OBool n) -> n
+               OBool n -> n
                _ -> False
        b_ = case (evaluate context b) of
-               ExprOk (OBool n) -> n
+               OBool n -> n
                _ -> False
      in
-     ExprOk (OBool ( a_ || b_))
+     OBool ( a_ || b_)
 
     -----------------------
     LT a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OBool ( a_ < b_))
+     OBool ( a_ < b_)
 
     GT a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OBool ( a_ > b_))
+     OBool ( a_ > b_)
 
     LE a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OBool ( a_ <= b_))
+     OBool ( a_ <= b_)
 
     GE a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OBool ( a_ >= b_))
+     OBool ( a_ >= b_)
 
     EQ a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OBool ( a_ == b_))
+     OBool ( a_ == b_)
 
     NE a b ->
      let
        a_ = case (evaluate context a) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
        b_ = case (evaluate context b) of
-               ExprOk (OFloat n) -> n
+               OFloat n -> n
                _ -> 0
      in
-     ExprOk (OBool ( a_ /= b_))
+     OBool ( a_ /= b_)
 
     Default a  ->
-     ExprOk (OBool True)
+     OBool True
 
 parse : String -> Result (List DeadEnd) Expr
 parse string__ =
@@ -734,7 +700,7 @@ typevarHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def", "return","break","continue"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var"]
     }
 
 default : Parser Expr
@@ -998,7 +964,7 @@ varValueHelp =
   variable
     { start = Char.isLower
     , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def", "return","break","continue"]
+    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var"]
     }
 ---------------------------------------------
 {--
@@ -1061,84 +1027,6 @@ argValuesTail  =
     , succeed []
     ]
 
---------------------------------------------- formalArg
-
-formalVarValue : Parser Expr
-formalVarValue =
-  succeed (\identity -> Variable identity)
-    |= formalVarValueHelp
-
-formalVarValueHelp : Parser String
-formalVarValueHelp =
-  variable
-    { start = Char.isLower
-    , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def", "return","break","continue"]
-    }
-
-formalArgValues :  Parser (List Expr)
-formalArgValues  =
-  succeed (::)
-    |. spaces
-    |= formalVarValue
-    |. spaces
-    |= formalArgValuesTail 
-    |> andThen
-            (\( arg ) ->
-                 succeed (arg)
-            )
-
-formalArgValuesTail :  Parser (List Expr)
-formalArgValuesTail  =
-  oneOf
-    [ succeed (::)
-        |. symbol ","
-        |. spaces
-        |= formalVarValue
-        |. spaces
-        |= lazy (\_ ->  formalArgValuesTail )
-    , succeed []
-    ]
-
---------------------------------------------- formalArg
-{--
-formalVarValue : Parser ArgValue
-formalVarValue =
-  succeed (\identity -> AvVar identity)
-    |= formalVarValueHelp
-
-formalVarValueHelp : Parser String
-formalVarValueHelp =
-  variable
-    { start = Char.isLower
-    , inner = \c -> Char.isAlphaNum c || c == '_'
-    , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def", "return","break","continue"]
-    }
-
-formalArgValues :  Parser (List ArgValue)
-formalArgValues  =
-  succeed (::)
-    |. spaces
-    |= formalVarValue
-    |. spaces
-    |= formalArgValuesTail 
-    |> andThen
-            (\( arg ) ->
-                 succeed (arg)
-            )
-
-formalArgValuesTail :  Parser (List ArgValue)
-formalArgValuesTail  =
-  oneOf
-    [ succeed (::)
-        |. symbol ","
-        |. spaces
-        |= formalVarValue
-        |. spaces
-        |= lazy (\_ ->  formalArgValuesTail )
-    , succeed []
-    ]
---}
 -------------------------------------------------------------
 
 func :  Parser Expr
@@ -1202,7 +1090,7 @@ array_index  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var" , "def", "return","break","continue"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var" ]
                 }
              
         |. symbol "["
@@ -1229,7 +1117,7 @@ dict_lookup  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def", "return","break","continue"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var"]
                 }
              
         |. symbol "."
@@ -1238,7 +1126,7 @@ dict_lookup  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var", "def", "return","break","continue"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif", "while" , "do", "end", "for", "case", "var"]
                 }
              
         |> andThen
@@ -1262,7 +1150,7 @@ dict_index  =
                 --, inner = Char.isAlphaNum
                 --, reserved = Set.empty
                 , inner = \c -> Char.isAlphaNum c || c == '_'
-                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var", "def", "return","break","continue"]
+                , reserved = Set.fromList [ "if", "then", "else", "elsif","while" , "do", "end", "for", "case", "var"]
                 }
              
         |. symbol "{"
@@ -1483,28 +1371,14 @@ strjoin context ar  =
        a_ = case (Array.get 0 ar) of
                   Just (AvString a)  ->
                            a 
-                  Just (AvVar a)  ->
-                           let
-                              value = getConstant a context
-                              ans_ = case value of
-                                          Just v ->
-                                                 v
-                                          _ ->
-                                                 (OString " AvVar not_found")
-                              result = case ans_ of
-                                          OString v ->
-                                                 v
-                                          _ ->
-                                                 " AvVar not_found"
-                           in
-                           result
                   _ ->
-                          ""
+                           ""
 
        b_ = case (Array.get 1 ar) of
                   Just (AvString a)  ->
                            a 
                   Just (AvVar a)  ->
+                           --"<<" ++ a  ++ ">>"
                            let
                               value = getConstant a context
                               ans_ = case value of
