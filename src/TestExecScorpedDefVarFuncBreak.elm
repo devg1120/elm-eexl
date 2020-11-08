@@ -1625,23 +1625,27 @@ script7 = """
 """
 
 fib = """
-var target = 30;
+  var target = 30;
 
-def fib (n) do
+  def fib (n) do
+    
     var a = 0;
+
     if n < 2 then
-        a =  n;
-    --else 
-    --    a = fib(n-1) + fib(n-2);
+      a =  n;
+    else
+      //a = fib(n-1) + fib(n-2); //式 引数
+      var n1 = n -1;
+      var n2 = n -2;
+
+      a = fib(n1) + fib(n2);
     end
-
     return a;
-
-end
-
+  end
 
 
-var result = fib(target);
+
+var result = fib(9);
 
 
 """
