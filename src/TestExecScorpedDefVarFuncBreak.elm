@@ -387,8 +387,9 @@ defFuncStatement =
     |. keyword "def"
     |. spaces
     --|= lazy (\_ -> typeVar)
-    |= lazy (\_ -> expression)
-    |. spaces
+    --|= lazy (\_ -> expression)
+    |= expression
+    --|. spaces
     |. symbol "("
     |. spaces
     |= formalArgValues
@@ -1175,6 +1176,16 @@ exec1 script_name =
   result
    
 --------------------------------------------------
+userFuncReg : UserEnv -> Context -> List Statement -> (UserEnv, Context)
+userFuncReg userenv context stmts =
+      --OString "EVAL"
+    let
+      _ = Debug.log (Debug.toString stmts)
+      arr = Array.fromList stmts
+      userenv_context_ = evalStep arr 0 userenv context
+    in
+      userenv_context_
+
 eval2 : UserEnv -> Context -> List Statement -> (UserEnv, Context)
 eval2 userenv context stmts =
       --OString "EVAL"
@@ -1184,7 +1195,6 @@ eval2 userenv context stmts =
       userenv_context_ = evalStep arr 0 userenv context
     in
       userenv_context_
-
 ---------------------------------------------------
 exec2 script_name =
   let
@@ -1198,6 +1208,8 @@ exec2 script_name =
                              |> addFunction "strjoin" strjoin 
 
                  userenv = userenvEmpty
+                 --(userenv_ ,_  ) = userFuncReg userenv context stmts
+                 --(userenv_2,ans) = eval2 userenv_ context stmts
                  (userenv_2,ans) = eval2 userenv context stmts
 
                  ans2 = case ans of
@@ -1638,7 +1650,9 @@ fib = """
       var n1 = n -1;
       var n2 = n -2;
 
-      a = fib(n1) + fib(n2);
+      var a1 = fib(n1) ;
+      var a2 = fib(n2) ;
+      a = a1 + a2;
     end
     return a;
   end
@@ -1650,6 +1664,18 @@ var result = fib(9);
 
 """
 
+fib2 = """
+
+  def fib (n) do
+    return n+1;
+  end
+
+
+
+var result = fib(9);
+
+
+"""
 {--
 
 https://github.com/jonathandturner/rhai/blob/master/scripts/fibonacci.rhai#L16
