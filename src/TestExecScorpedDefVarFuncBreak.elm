@@ -561,7 +561,8 @@ userFuncExec userenv context funcname input_args =
 exec_evaluate :  UserEnv -> Context -> Expr ->  OutVal
 exec_evaluate  (UserEnv userenv) context expr =       
      let
-       r = evaluate  context expr
+       --r = evaluate  context expr
+       r = evaluate  (UserEnv userenv) userFuncExec context expr
      in
     case r of
          ExprOk a ->
@@ -1741,8 +1742,8 @@ var z = 9;
 var result3 = sum(z);
 var zs = "9";
 var result4 = sumstr(zs);
-//var result5 = sum(z) + sum(z);
-var result5 = 1 + sum(z) ;
+var result5 = sum(z) + sum(z);
+//var result5 = 1 + sum(z) ;
 var result6 = 1 + 2 ;
 var result7 = 1 + z ;
 var result8 = strjoin("A","B") + strjoin("C","D") ;

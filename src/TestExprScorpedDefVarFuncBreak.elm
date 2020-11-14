@@ -296,8 +296,10 @@ type ExprResult error value notfound
 
 --evaluate : Expr -> OutVal
 --evaluate :  Context -> Expr -> OutVal
-evaluate :  Context -> Expr -> ExprResult String OutVal (String, (Array.Array ArgValue))
-evaluate  context expr =
+--evaluate :  Context -> Expr -> ExprResult String OutVal (String, (Array.Array ArgValue))
+--evaluate :  (UserEnv -> Context -> String -> (Array.Array ArgValue) -> OutVal) -> Context -> Expr -> ExprResult String OutVal (String, (Array.Array ArgValue))
+evaluate :  userenv -> (userenv -> Context -> String -> (Array.Array ArgValue) -> OutVal) -> Context -> Expr -> ExprResult String OutVal (String, (Array.Array ArgValue))
+evaluate  userenv userfunc context expr =
   case expr of
     Variable name ->
        let
@@ -332,7 +334,8 @@ evaluate  context expr =
                             ExprOk (f context args)
                      _ ->
                             --ExprNotFoundFunc  ("**not_found function:" ++ name)
-                            ExprNotFoundFunc  (name,args)
+                            --ExprNotFoundFunc  (name,args)
+                            ExprOk (userfunc  userenv context name args)
 
 {--
     Function name args ->
@@ -480,8 +483,8 @@ evaluate  context expr =
      OFloat ( a_ +  b_)
     --}
      let
-       a_ = evaluate context a
-       b_ = evaluate context b
+       a_ = evaluate userenv userfunc context a
+       b_ = evaluate userenv userfunc context b
      in
      case (a_, b_) of
         (ExprOk (OFloat aa),  ExprOk (OFloat bb)) ->
@@ -494,10 +497,10 @@ evaluate  context expr =
 
     Sub a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -505,10 +508,10 @@ evaluate  context expr =
 
     Mul a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -516,10 +519,10 @@ evaluate  context expr =
 
     Div a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -527,10 +530,10 @@ evaluate  context expr =
 
     Div2 a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -538,10 +541,10 @@ evaluate  context expr =
 
     Div3 a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -557,10 +560,10 @@ evaluate  context expr =
 
     And a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OBool n) -> n
                _ -> False
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OBool n) -> n
                _ -> False
      in
@@ -568,10 +571,10 @@ evaluate  context expr =
 
     Or a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OBool n) -> n
                _ -> False
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OBool n) -> n
                _ -> False
      in
@@ -580,10 +583,10 @@ evaluate  context expr =
     -----------------------
     LT a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -591,10 +594,10 @@ evaluate  context expr =
 
     GT a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -602,10 +605,10 @@ evaluate  context expr =
 
     LE a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -613,10 +616,10 @@ evaluate  context expr =
 
     GE a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -624,10 +627,10 @@ evaluate  context expr =
 
     EQ a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -635,10 +638,10 @@ evaluate  context expr =
 
     NE a b ->
      let
-       a_ = case (evaluate context a) of
+       a_ = case (evaluate userenv userfunc context a) of
                ExprOk (OFloat n) -> n
                _ -> 0
-       b_ = case (evaluate context b) of
+       b_ = case (evaluate userenv userfunc context b) of
                ExprOk (OFloat n) -> n
                _ -> 0
      in
@@ -1509,6 +1512,7 @@ strjoin context ar  =
    in
    OString ans
 
+{--
 exec : String -> String
 exec str =
  let
@@ -1541,12 +1545,13 @@ exec str =
                                     ,("e" , OFloat 5)]) )
                       |> addFunction "strjoin" strjoin 
 
-             ans = evaluate context expr
+             ans = evaluate  context expr
            in
            Debug.toString ans
              
  in
  result
+--}
 
 {--
 > import TestExpr exposing (..)
