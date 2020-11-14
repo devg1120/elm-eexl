@@ -1031,6 +1031,7 @@ varValue context =
             )
 --}
 ---------------------------------------------
+
 argValues :  Parser (List ArgValue)
 argValues  =
   succeed (::)
@@ -1064,7 +1065,6 @@ argValuesTail  =
         |= lazy (\_ ->  argValuesTail )
     , succeed []
     ]
-
 --------------------------------------------- formalArg
 
 formalVarValue : Parser Expr
@@ -1156,12 +1156,6 @@ func  =
                 }
             )
         |. backtrackable (symbol "(")
-        --|= stringValues
-        --|= oneOf
-        --    [ backtrackable  stringValues     -- ("AAA","BBB","CCC")
-        --    , backtrackable  intValues        -- (1, 2, 3)
-        --    ,  floatValues
-        --    ]
         |= argValues 
         |. symbol ")"
         |> andThen
@@ -1357,18 +1351,6 @@ term =
          ]
     |. spaces
 
-term2 : Parser Expr
-term2 =
-  oneOf
-    [ digits
-    , succeed identity
-        |. symbol "("
-        |. spaces
-        |= lazy (\_ -> expression)
-        |. spaces
-        |. symbol ")"
-    ]
-
 
 expression : Parser Expr
 expression =
@@ -1376,10 +1358,6 @@ expression =
     |> andThen (expressionHelp [])
 
 
-{-| If you want to parse operators with different precedence (like `+` and `*`)
-a good strategy is to go through and create a list of all the operators. From
-there, you can write separate code to sort out the grouping.
--}
 expressionHelp : List (Expr, Operator) -> Expr -> Parser Expr
 expressionHelp revOps expr =
   oneOf

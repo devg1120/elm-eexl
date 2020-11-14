@@ -388,8 +388,9 @@ defFuncStatement =
     |. spaces
     --|= lazy (\_ -> typeVar)
     --|= lazy (\_ -> expression)
-    |= expression
-    --|. spaces
+    --|= expression
+    |= typevar  -- func name
+    |. spaces
     |. symbol "("
     |. spaces
     |= formalArgValues
@@ -480,8 +481,20 @@ userFuncExec2 (Context base_context) args stmts userenv input_args =
                                    OFloat a
                        Just (AvString a)  -> 
                                    OString a
+                       Just (AvVar a)  -> 
+                                   let
+                                      --value_ = getConstant a context
+                                      value_ = getConstant a (Context base_context)
+                                   in
+                                   case value_ of
+                                          Just v_ ->
+                                                 v_
+                                                 --OFloat 3
+                                          _ ->
+                                                 (OString " AvVar not_found") 
                        _ ->
-                             OFloat 0
+                             OFloat 3
+
                   in
                   (name, value)
 
@@ -523,7 +536,7 @@ userFuncExec2 (Context base_context) args stmts userenv input_args =
                 Just r ->
                          r
                 _ ->
-                         OString ""
+                         OString "NG"
 
 userFuncExec : UserEnv -> Context -> String -> (Array.Array ArgValue) -> OutVal
 userFuncExec userenv context funcname input_args =
@@ -1637,7 +1650,6 @@ script7 = """
 """
 
 fib = """
-  var target = 30;
 
   def fib (n) do
     
@@ -1658,8 +1670,7 @@ fib = """
   end
 
 
-
-var result = fib(9);
+var result = fib(13);
 
 
 """
@@ -1667,15 +1678,100 @@ var result = fib(9);
 fib2 = """
 
   def fib (n) do
-    return n+1;
+    
+    var a = 0;
+
+    if n < 2 then
+      a =  n;
+    else
+      //a = fib(n-1) + fib(n-2); //式 引数
+      var n1 = n -1;
+      var n2 = n -2;
+
+      a = fib(n1) + fib(n2);
+    end
+    return a;
   end
 
 
-
-var result = fib(9);
+var result = fib(13);
 
 
 """
+fib3 = """
+
+  def fib (n) do
+    
+
+    if n < 2 then
+      return n;
+    else
+      //a = fib(n-1) + fib(n-2); //式 引数
+      var n1 = n -1;
+      var n2 = n -2;
+
+      var a1 = fib(n1) ;
+      var a2 = fib(n2) ;
+      var x = a1 + a2;
+      return x;
+    end
+  end
+
+
+var result = fib(13);
+
+
+"""
+fib4 = """
+
+  def sum(n) do
+    return n + 3;
+  end
+  def sumstr(n) do
+    return  n + "3";
+  end
+
+  def fib(n) do
+    return sum(n);
+  end
+
+var result1 = fib(9);
+var result2 = sum(9);
+var z = 9;
+var result3 = sum(z);
+var zs = "9";
+var result4 = sumstr(zs);
+//var result5 = sum(z) + sum(z);
+var result5 = 1 + sum(z) ;
+var result6 = 1 + 2 ;
+var result7 = 1 + z ;
+var result8 = strjoin("A","B") + strjoin("C","D") ;
+
+  var e1 = "abc";
+  var e2 = "def";
+  var e = strjoin(e1, e2); //lib
+"""
+
+sum = """
+def sum (n) do
+
+  var a = 0;
+
+  if n < 2 then
+      return n;
+  else
+
+  var m = n -1;
+  var x = sun(m);
+  var z = m + x;
+  return z;
+  end
+end
+
+var result = sum(9);
+
+"""
+
 {--
 
 https://github.com/jonathandturner/rhai/blob/master/scripts/fibonacci.rhai#L16
