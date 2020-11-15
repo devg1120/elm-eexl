@@ -1783,6 +1783,44 @@ var result = fib(13);
 """
 fib4 = """
 
+  def fib (n) do
+
+    if n < 2 then
+      return n;
+    else
+      //a = fib(n-1) + fib(n-2); //式 引数
+      var n1 = n -1;
+      var n2 = n -2;
+
+      return fib(n1) + fib(n2);
+    end
+  end
+
+
+var result = fib(13);
+
+
+"""
+fib5 = """
+
+  def fib (n) do
+
+    if n < 2 then
+      return n;
+    else
+      //a = fib(n-1) + fib(n-2); //式 引数
+
+      return fib(n-1) + fib(n-2);
+    end
+  end
+
+
+var result = fib(13);
+
+
+"""
+fib6 = """
+
   def sum(n) do
     return n + 3;
   end

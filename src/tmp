@@ -25,8 +25,7 @@ type Expr
   | Bool Bool
   --| Variable OutVal
   | Variable String
-  --| Function String (Array.Array ArgValue)
-  | Function String (List Expr)
+  | Function String (Array.Array ArgValue)
   | ArrayIndex String Int
   | DictLookUp String String
   | DictIndex String String
@@ -299,27 +298,6 @@ type ExprResult error value notfound
     | ExprNotFoundFunc notfound
     | ExprErr error
 
-argsToAvArgs : userenv -> (userenv -> Context -> String -> (Array.Array ArgValue) -> OutVal) -> Context ->List Expr -> Input
-argsToAvArgs userenv userfunc context exprs =
-     let
-       func3 expr =
-           let
-             value = evaluate userenv userfunc context expr
-           in
-           case value of
-                (ExprOk (OString a)) ->
-                      AvString a
-                (ExprOk (OFloat a)) ->
-                      AvFloat a
-                (ExprOk (OBool a)) ->
-                      AvBool a
-                _ ->
-                      AvString "CVNG"
-
-       args = List.map func3 exprs
-     in 
-     Array.fromList args
-
 --evaluate : Expr -> OutVal
 --evaluate :  Context -> Expr -> OutVal
 --evaluate :  Context -> Expr -> ExprResult String OutVal (String, (Array.Array ArgValue))
@@ -343,6 +321,17 @@ evaluate  userenv userfunc context expr =
     Function name args ->
          let
            func_ = getFunction name context
+           ans = case func_ of
+                     Just f ->
+                            (f context args)
+                     _ ->
+                            (OString ("not_found function:" ++ name))
+         in
+         ans
+--}
+    Function name args ->
+         let
+           func_ = getFunction name context
          in
            case func_ of
                      Just f ->
@@ -351,21 +340,24 @@ evaluate  userenv userfunc context expr =
                             --ExprNotFoundFunc  ("**not_found function:" ++ name)
                             --ExprNotFoundFunc  (name,args)
                             ExprOk (userfunc  userenv context name args)
---}
 
+{--
     Function name args ->
          let
-           func_ = getFunction name context
-           args_ = argsToAvArgs userenv userfunc context args
+           result = userFunction name args context
+           ans = case result of
+                     Ok a ->
+                            a
+                     Err a ->
+                            func_ = getFunction name context
+                            ans = case func_ of
+                                      Just f ->
+                                             (f context args)
+                                      _ ->
+                                             (OString ("not_found function:" ++ name))
          in
-           case func_ of
-                     Just f ->
-                            ExprOk (f context args_)
-                     _ ->
-                            --ExprNotFoundFunc  ("**not_found function:" ++ name)
-                            --ExprNotFoundFunc  (name,args)
-                            ExprOk (userfunc  userenv context name args_)
-
+         ans
+--}
     ArrayIndex name index ->
          let
            array_ = getConstant name context
@@ -1046,7 +1038,7 @@ varValue context =
             )
 --}
 ---------------------------------------------
-{--
+
 argValues :  Parser (List ArgValue)
 argValues  =
   succeed (::)
@@ -1080,34 +1072,6 @@ argValuesTail  =
         |= lazy (\_ ->  argValuesTail )
     , succeed []
     ]
---}
-
---argValues :  Parser (List ArgValue)
-argValues :  Parser (List Expr)
-argValues  =
-  succeed (::)
-    |. spaces
-    |= expression2
-    |. spaces
-    |= argValuesTail 
-    |> andThen
-            (\( arg ) ->
-                 succeed (arg)
-            )
-
---argValuesTail :  Parser (List ArgValue)
-argValuesTail :  Parser (List Expr)
-argValuesTail  =
-  oneOf
-    [ succeed (::)
-        |. symbol ","
-        |. spaces
-        |= expression2
-        |. spaces
-        |= lazy (\_ ->  argValuesTail )
-    , succeed []
-    ]
-
 --------------------------------------------- formalArg
 
 formalVarValue : Parser Expr
@@ -1187,7 +1151,7 @@ formalArgValuesTail  =
     ]
 --}
 -------------------------------------------------------------
-{--
+
 func :  Parser Expr
 func  =
     succeed Tuple.pair
@@ -1221,30 +1185,7 @@ func  =
                 in
                 succeed (Function name  base)
             )
---}
 
-func :  Parser Expr
-func  =
-    succeed Tuple.pair
-        |= backtrackable
-            (variable
-                { start = Char.isLower
-                , inner = Char.isAlphaNum
-                , reserved = Set.empty
-                }
-            )
-        |. backtrackable (symbol "(")
-        |= argValues 
-        |. symbol ")"
-        |> andThen
-            (\( name, args ) ->
-                --let
-                --  base = Array.fromList args
-
-                --in
-                --succeed (Function name  base)
-                succeed (Function name  args)
-            )
 
 ----------------------------------------------------------
 -- FUNC def   end
@@ -1436,53 +1377,7 @@ expressionHelp revOps expr =
     , lazy (\_ -> succeed (finalize revOps expr))
     ]
 
------------------------------------------------------------
-term2 : Parser Expr
-term2 =
-  succeed (\a -> a)
-    |. spaces
-    |= oneOf
-         --[ digits
-         [ backtrackable string 
-         , backtrackable array
-         , backtrackable dict
-         --, backtrackable func
-         , backtrackable array_index
-         , backtrackable dict_lookup
-         , backtrackable dict_index
-         , backtrackable default
-         , backtrackable typevar
-         , backtrackable digits
-         , bool
-         , succeed identity
-             |. symbol "("
-             |. spaces
-             |= lazy (\_ -> expression2)
-             |. spaces
-             |. symbol ")"
-         ]
-    |. spaces
 
-
-expression2 : Parser Expr
-expression2 =
-  term2
-    |> andThen (expressionHelp2 [])
-
-
-expressionHelp2 : List (Expr, Operator) -> Expr -> Parser Expr
-expressionHelp2 revOps expr =
-  oneOf
-    [ succeed Tuple.pair
-        |. spaces
-        |= operator
-        |. spaces
-        |= term2
-        |> andThen (\(op, newExpr) -> expressionHelp2 ((expr,op) :: revOps) newExpr)
-    , lazy (\_ -> succeed (finalize revOps expr))
-    ]
-
------------------------------------------------------------
 type Operator = AddOp 
               | SubOp
               | MulOp
