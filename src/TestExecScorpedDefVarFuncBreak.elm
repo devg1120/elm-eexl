@@ -1803,7 +1803,7 @@ var result = fib(13);
 """
 fib5 = """
 
-  def fib (n) do
+  def fib(n) do
 
     if n < 2 then
       return n;

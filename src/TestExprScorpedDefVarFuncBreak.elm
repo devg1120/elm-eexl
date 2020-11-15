@@ -1622,8 +1622,8 @@ strjoin context ar  =
    OString ans
 
 
-exec : String -> String
-exec str =
+exprexec : String -> String
+exprexec str =
  let
    ast = parse str
    result = case ast of
@@ -1631,11 +1631,6 @@ exec str =
            Debug.toString err
         Ok expr ->
            let
-             --context = empty
-             --context_ = addConstant "test1" (OString "OKOK") context
-             --context2 = addConstant "test_flort" (OFloat 10.1) context_
-             --context3 = addFunction "strjoin" strjoin  context2
-             --ans = evaluate context3 expr
 
              context = empty
                       |> addConstant "test1" (OString "OKOK") 
@@ -1673,80 +1668,80 @@ exec str =
 
 {--
 > import TestExpr exposing (..)
-> exec " 1 + 3 + (7 //2) "
+> exprexec " 1 + 3 + (7 //2) "
 "OFloat 7" : String
-> exec " 1 + 3 + (7 /2) "
+> exprexec " 1 + 3 + (7 /2) "
 "OFloat 7.5" : String
-> exec " 1 + 3 + (7 %2) "
+> exprexec " 1 + 3 + (7 %2) "
 "OFloat 5" : String
-> exec " \"abc\" + \"ABC\" "
+> exprexec " \"abc\" + \"ABC\" "
 "OString \"abcABC\"" : String
-> exec " False "
+> exprexec " False "
 "OBool False" : String
-> exec " True "
+> exprexec " True "
 "OBool True" : String
-> exec " True && True"
+> exprexec " True && True"
 "OBool True" : String
-> exec " True && False"
+> exprexec " True && False"
 "OBool False" : String
-> exec " True || True"
+> exprexec " True || True"
 "OBool True" : String
-> exec " True || False"
+> exprexec " True || False"
 "OBool True" : String
-> exec " \"abc\" + test1 "
+> exprexec " \"abc\" + test1 "
 "OString \"abcOKOK\"" : String
 
-> exec " 1.1  + test_flort "
+> exprexec " 1.1  + test_flort "
 "OFloat 11.2" : String
-> exec " \"abc\" + strjoin( \"ABC\", \"XYZ\") "
+> exprexec " \"abc\" + strjoin( \"ABC\", \"XYZ\") "
 "OString \"abcABCXYZ\"" : Strin
-> exec " \"abc\" + strjoin( \"ABC\", test1) "
+> exprexec " \"abc\" + strjoin( \"ABC\", test1) "
 "OString \"abcABCOKOK\"" : String
 
-> exec "1.0 <= 100.1"
+> exprexec "1.0 <= 100.1"
 "OBool True" : String
-> exec "1.0 < 100.1"
+> exprexec "1.0 < 100.1"
 "OBool True" : String
-> exec "1.0 > 100.1"
+> exprexec "1.0 > 100.1"
 "OBool False" : String
-> exec "1.0 >= 100.1"
+> exprexec "1.0 >= 100.1"
 "OBool False" : String
-> exec "1.0 <= 100.1"
+> exprexec "1.0 <= 100.1"
 "OBool True" : String
-> exec "1.0 == 100.1"
+> exprexec "1.0 == 100.1"
 "OBool False" : String
-> exec "1.0 != 100.1"
+> exprexec "1.0 != 100.1"
 "OBool True" : String
-> exec "1.1 == 1.1"
+> exprexec "1.1 == 1.1"
 "OBool True" : String
 
-> exec "e"
+> exprexec "e"
 "OString \"not_found\"" : String
 
                                 --array
-> exec " [ 1,2,3,4,5] "
+> exprexec " [ 1,2,3,4,5] "
 "OArray (Array.fromList [OFloat 1,OFloat 2,OFloat 3])" : String
 
-> exec " [ \"1\",\"2\",\"3\",\"4\",\"5\"] "
+> exprexec " [ \"1\",\"2\",\"3\",\"4\",\"5\"] "
 
                                 --dict
-> exec "{\"ab\" : 1, \"xy\" : 2}"
+> exprexec "{\"ab\" : 1, \"xy\" : 2}"
 "ODict (Dict.fromList [(\"ab\",OFloat 1),(\"xy\",OFloat 2)])" : String
 
 
-> exec " array_test " 
+> exprexec " array_test " 
 "OArray (Array.fromList [OFloat 1,OFloat 2,OFloat 3,OFloat 4,OFloat 5])"
     : String
-> exec " dict_test " 
+> exprexec " dict_test " 
 "ODict (Dict.fromList [(\"a\",OFloat 1),(\"b\",OFloat 2),(\"c\",OFloat 3),(\"d\",OFloat 4),(\"e\",OFloat 5)])"
 
-> exec "array_test[0]"
+> exprexec "array_test[0]"
 "OFloat 1" : String
 
-> exec "dict_test.c"
+> exprexec "dict_test.c"
 "OFloat 3" : String
 
-> exec "dict_test{\"c\"}"
+> exprexec "dict_test{\"c\"}"
 "OFloat 3" : String
 
 --}
