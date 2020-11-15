@@ -1621,7 +1621,7 @@ strjoin context ar  =
    in
    OString ans
 
-{--
+
 exec : String -> String
 exec str =
  let
@@ -1654,13 +1654,22 @@ exec str =
                                     ,("e" , OFloat 5)]) )
                       |> addFunction "strjoin" strjoin 
 
-             ans = evaluate  context expr
+             userenv = {
+                         userFunctions = Dict.empty
+                        ,userEnv = Dict.empty
+                        }
+
+             userfunc : userenv -> Context -> String -> (Array.Array ArgValue) -> OutVal
+             userfunc userenv_ context_ funcname input_args =
+                         OString "OK"
+
+             ans = evaluate userenv userfunc  context expr
            in
            Debug.toString ans
              
  in
  result
---}
+
 
 {--
 > import TestExpr exposing (..)
