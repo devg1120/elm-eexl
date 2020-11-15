@@ -500,12 +500,13 @@ userFuncExec2 (Context base_context) args stmts userenv input_args =
 
               new_args = List.indexedMap func args
               context = empty
+              context__ = setFuncTop True context
 
               func2 (name, v) context_ =
                         addConstant name v context_
 
 
-              (Context context1) = List.foldl  func2 context new_args
+              (Context context1) = List.foldl  func2 context__ new_args
               context2 =
                        Context
                           { context1
@@ -785,6 +786,51 @@ evalCaseSwitch   target exprStmts  userenv context =
             in         
             userenv_context_2 
 
+-----------------------------------
+isReturn : Context -> Bool
+isReturn context =
+           let
+            context_record = case context of
+                        Context con -> 
+                                 con
+           in
+           context_record.return
+
+setReturn : Bool -> Context -> Context
+setReturn bool context =
+           let
+            context_record = case context of
+                        Context con -> 
+                                 con
+           in
+            Context
+                 {
+                 context_record
+                      | return  = bool
+                 }
+
+isFuncTop : Context -> Bool
+isFuncTop context =
+           let
+            context_record = case context of
+                        Context con -> 
+                                 con
+           in
+           context_record.functop
+
+setFuncTop : Bool -> Context -> Context
+setFuncTop bool context =
+           let
+            context_record = case context of
+                        Context con -> 
+                                 con
+           in
+            Context
+                 {
+                 context_record
+                      | functop  = bool
+                 }
+
 isBreak : Context -> Bool
 isBreak context =
            let
@@ -847,6 +893,18 @@ scopePush context =
            else
                    context
 
+copyReturn : Context -> Context -> Context
+copyReturn top old =
+           let
+               ret = getConstant "_return_" old
+
+           in
+           case ret of
+                  Just r ->
+                        addConstant "_return_" r top
+                  _ ->
+                        top
+
 scopePop : Context -> Context
 scopePop context =
            let
@@ -857,12 +915,14 @@ scopePop context =
            if context_record.scope then
                    let
                      ct = dicPop context_record.constants
+                     new_context =  Context
+                               {
+                                context_record
+                                 | constants  = ct
+                                 }
+
                    in
-                   Context
-                     {
-                      context_record
-                       | constants  = ct
-                       }
+                   copyReturn new_context context
            else
                    context
 
@@ -943,8 +1003,9 @@ evalStep arr pos userenv context =
         Just (Return a ) ->
             let
                a_ = exec_evaluate userenv context a
+               context_ = setReturn True context
             in         
-            (userenv, (addConstant "_return_" a_  context)  )
+            (userenv, (addConstant "_return_" a_  context_)  )
 
         Just (Break  ) ->
             let
@@ -1152,7 +1213,7 @@ evalStep arr pos userenv context =
        let
          context__ = Tuple.second userenv_context_pair
        in
-       if isBreak context__ then
+       if isBreak context__ || isReturn context__ then
           userenv_context_pair
        else
           if isContinue context__ then
@@ -1702,7 +1763,6 @@ var result = fib(13);
 fib3 = """
 
   def fib (n) do
-    
 
     if n < 2 then
       return n;
@@ -1711,9 +1771,7 @@ fib3 = """
       var n1 = n -1;
       var n2 = n -2;
 
-      var a1 = fib(n1) ;
-      var a2 = fib(n2) ;
-      var x = a1 + a2;
+      var x = fib(n1) + fib(n2);
       return x;
     end
   end

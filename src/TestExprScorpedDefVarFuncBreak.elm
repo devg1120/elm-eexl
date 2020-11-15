@@ -178,6 +178,8 @@ type Context
         --{ constants : Dict String OutVal
         { constants : Stack.Stack (Dict.Dict String OutVal)
         , functions : Dict String (Context -> Input -> OutVal)
+        , functop : Bool
+        , return : Bool
         , break : Bool
         , continue : Bool
         , log : String
@@ -195,6 +197,8 @@ empty =
         --{ constants = Dict.empty
         { constants = dicInit
         , functions = Dict.empty
+        , functop = False
+        , return = False
         , break = False
         , continue = False
         , log = ""
